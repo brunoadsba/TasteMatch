@@ -1,8 +1,12 @@
 # TasteMatch 🍽️
 
-> **Agente de Recomendação Inteligente para Delivery**
+> **Agente de Recomendação Inteligente para Delivery**  
+> Sistema de recomendações personalizadas que utiliza IA generativa e machine learning
 
-Sistema de recomendações personalizadas que utiliza IA generativa e machine learning para sugerir restaurantes baseado no histórico de pedidos dos usuários.
+[![Status](https://img.shields.io/badge/status-MVP%20Funcional-success)]()
+[![Backend](https://img.shields.io/badge/backend-FastAPI-blue)]()
+[![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20Vite-61dafb)]()
+[![IA](https://img.shields.io/badge/IA-Groq%20LLM-orange)]()
 
 ---
 
@@ -14,15 +18,46 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 - 🤖 Gera recomendações personalizadas usando similaridade vetorial
 - 💡 Cria insights contextualizados com IA generativa explicando **por quê** cada restaurante foi recomendado
 - ⚡ Processa recomendações em tempo real com cache inteligente
+- 🔐 Sistema completo de autenticação JWT
+- 🎨 Interface moderna com React + TypeScript + Shadcn/UI
+
+### Status do Projeto
+
+**Progresso:** ~85% do MVP completo
+
+- ✅ **Backend:** 100% completo (FastAPI, autenticação, CRUD, recomendações, GenAI)
+- ✅ **IA/ML:** 100% completo (embeddings, algoritmo de recomendação)
+- ✅ **GenAI:** 100% completo (Groq API com retry robusto)
+- ✅ **Frontend:** 90% completo (React + Vite + TypeScript + Shadcn/UI)
+- ⏳ **Testes:** 20% (testes manuais completos, automatizados pendentes)
+- ⏳ **Deploy:** 0% (pendente)
 
 ### Tecnologias Principais
 
-- **Backend:** FastAPI, Python 3.11+
-- **IA/ML:** sentence-transformers, pandas, scikit-learn, pgvector
-- **LLM:** Groq API (Llama 3.1) para geração de insights
-- **Banco de Dados:** SQLite (dev) / PostgreSQL com pgvector (prod)
-- **Frontend:** HTML/CSS/JavaScript (Vanilla)
-- **Infraestrutura:** Docker Compose para desenvolvimento local
+**Backend:**
+- FastAPI 0.104+ (Python 3.11+)
+- SQLAlchemy 2.0+ com Alembic (migrations)
+- SQLite (desenvolvimento) / PostgreSQL com pgvector (produção)
+- JWT para autenticação
+- Bcrypt para hash de senhas
+
+**IA/ML:**
+- sentence-transformers (all-MiniLM-L6-v2)
+- scikit-learn (similaridade coseno)
+- pandas, numpy
+
+**GenAI:**
+- Groq API (Llama 3.3 70B Versatile)
+- Retry com backoff exponencial
+- Cache de insights (TTL 7 dias)
+
+**Frontend:**
+- React 18+ com TypeScript
+- Vite (build tool)
+- Shadcn/UI (componentes)
+- Tailwind CSS v3
+- React Router
+- Axios (cliente HTTP)
 
 ---
 
@@ -30,110 +65,141 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 
 ### Pré-requisitos
 
-- **Opção A (Docker):** Docker e Docker Compose instalados
-- **Opção B (Manual):** Python 3.11+, pip ou poetry, Git
+- Python 3.11+
+- Node.js 18+ e npm
+- Git
 
-### Instalação
+### Instalação e Configuração
 
-#### Opção A: Usando Docker Compose (Recomendado)
+#### 1. Clone o Repositório
 
-A forma mais simples e reprodutível:
-
-1. **Clone o repositório:**
 ```bash
-git clone <repo-url>
+git clone https://github.com/brunoadsba/TasteMatch.git
 cd tastematch
 ```
 
-2. **Configure variáveis de ambiente:**
+#### 2. Configure o Backend
+
 ```bash
-cp .env.example .env
-# Edite .env e adicione sua GROQ_API_KEY
-```
-
-3. **Inicie os serviços:**
-```bash
-docker-compose up -d
-```
-
-Pronto! A API estará disponível em `http://localhost:8000`
-
-- **Documentação Swagger:** `http://localhost:8000/docs`
-- **ReDoc:** `http://localhost:8000/redoc`
-
-#### Opção B: Instalação Manual
-
-1. **Clone o repositório:**
-```bash
-git clone <repo-url>
-cd tastematch
-```
-
-2. **Crie e ative ambiente virtual:**
-```bash
+# Crie e ative ambiente virtual
 python3.11 -m venv venv
 source venv/bin/activate  # Linux/Mac
 # ou
 venv\Scripts\activate  # Windows
-```
 
-3. **Instale dependências:**
-```bash
+# Instale dependências
 pip install -r requirements.txt
 ```
 
-**Nota sobre dependências ML:**
-- `sentence-transformers` requer PyTorch, que será instalado automaticamente
-- Em sistemas Linux/Mac, geralmente funciona sem configuração adicional
-- Se encontrar problemas, consulte: https://pytorch.org/get-started/locally/
+**Nota:** A instalação do `sentence-transformers` pode demorar alguns minutos, pois baixa o modelo de embeddings.
 
-4. **Configure variáveis de ambiente:**
+#### 3. Configure Variáveis de Ambiente
+
 ```bash
+# Copie o arquivo de exemplo
 cp .env.example .env
-# Edite .env e preencha as variáveis necessárias (especialmente GROQ_API_KEY)
+
+# Edite .env e configure (obrigatório: GROQ_API_KEY)
+nano .env  # ou use seu editor preferido
 ```
 
-5. **Inicialize o banco de dados:**
+**Variáveis obrigatórias:**
+- `GROQ_API_KEY` - Obtenha em https://console.groq.com (gratuito)
+- `JWT_SECRET_KEY` - Gere uma chave aleatória
+- `SECRET_KEY` - Gere uma chave aleatória
+
+#### 4. Inicialize o Banco de Dados
+
 ```bash
 cd backend
-python scripts/init_db.py
+
+# Aplicar migrations
+alembic upgrade head
+
+# Popular com dados de exemplo (inclui geração de embeddings)
 python scripts/seed_data.py
-python scripts/generate_embeddings.py
 ```
 
-6. **Execute a aplicação:**
+**Dados criados:**
+- 25 restaurantes (diferentes culinárias)
+- 5 usuários de exemplo
+- 67 pedidos de exemplo
+- Embeddings gerados automaticamente
+
+#### 5. Inicie o Backend
+
 ```bash
-uvicorn app.main:app --reload --port 8000
+# No diretório backend/
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 A API estará disponível em: `http://localhost:8000`
+- **Swagger UI:** http://localhost:8000/docs
+- **ReDoc:** http://localhost:8000/redoc
+- **Health Check:** http://localhost:8000/health
 
-- **Documentação Swagger:** `http://localhost:8000/docs`
-- **ReDoc:** `http://localhost:8000/redoc`
+#### 6. Configure e Inicie o Frontend
+
+```bash
+# Em outro terminal, no diretório frontend/
+cd frontend
+
+# Instale dependências
+npm install
+
+# Inicie servidor de desenvolvimento
+npm run dev
+```
+
+O frontend estará disponível em: `http://localhost:5173` (ou outra porta se 5173 estiver em uso)
+
+---
+
+## 🔑 Credenciais de Teste
+
+Após executar o seed, você pode usar estas credenciais:
+
+| Email | Senha | Nome |
+|-------|-------|------|
+| joao@example.com | 123456 | João Silva |
+| maria@example.com | 123456 | Maria Santos |
+| pedro@example.com | 123456 | Pedro Oliveira |
+| ana@example.com | 123456 | Ana Costa |
+| carlos@example.com | 123456 | Carlos Souza |
 
 ---
 
 ## 📚 Documentação
 
-### Documentação Completa
+### Documentos Principais
 
-Consulte **[SPEC.md](./SPEC.md)** para a especificação técnica completa do projeto, incluindo:
+- **[SPEC.md](./SPEC.md)** - Especificação técnica completa
+- **[plano-de-acao.md](./plano-de-acao.md)** - Plano de desenvolvimento detalhado
+- **[STATUS_PROJETO.md](./STATUS_PROJETO.md)** - Status atual do projeto
 
-- Arquitetura detalhada
-- Modelos de dados
-- Especificação completa de endpoints
-- Lógica de recomendação
-- Geração de insights com GenAI
-- Guia de desenvolvimento
-- Estrutura de pastas
+### Endpoints Principais da API
 
-### Endpoints Principais
-
+**Autenticação:**
 - `POST /auth/register` - Registrar novo usuário
 - `POST /auth/login` - Autenticar usuário
-- `GET /api/recommendations` - Obter recomendações personalizadas
-- `GET /api/restaurants` - Listar restaurantes
-- `GET /api/orders` - Histórico de pedidos
+
+**Recomendações:**
+- `GET /api/recommendations?limit=10&refresh=false` - Obter recomendações personalizadas
+- `GET /api/recommendations/{restaurant_id}/insight` - Obter insight específico
+
+**Restaurantes:**
+- `GET /api/restaurants` - Listar restaurantes (com paginação e filtros)
+- `GET /api/restaurants/{id}` - Detalhes de um restaurante
+
+**Pedidos:**
+- `GET /api/orders` - Histórico de pedidos do usuário
+- `POST /api/orders` - Criar novo pedido
+
+**Usuário:**
+- `GET /api/users/me` - Informações do usuário autenticado
+- `GET /api/users/me/preferences` - Preferências agregadas
+
+**Monitoramento:**
 - `GET /health` - Health check da aplicação
 
 Consulte a documentação Swagger (`/docs`) para detalhes completos de todos os endpoints.
@@ -144,126 +210,186 @@ Consulte a documentação Swagger (`/docs`) para detalhes completos de todos os 
 
 ```
 tastematch/
-├── backend/          # API FastAPI
-├── frontend/         # Interface do usuário
-├── data/            # Dados de exemplo
-├── docs/            # Documentação adicional
-├── docker-compose.yml # Orquestração de serviços
-├── SPEC.md          # Especificação técnica completa
-└── README.md        # Este arquivo
+├── backend/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── routes/          # Endpoints da API
+│   │   │   └── deps.py          # Dependências (auth, db)
+│   │   ├── core/
+│   │   │   ├── embeddings.py    # Geração de embeddings
+│   │   │   ├── recommender.py   # Lógica de recomendação
+│   │   │   ├── llm_service.py   # Integração Groq API
+│   │   │   └── security.py      # JWT e hash de senhas
+│   │   ├── database/
+│   │   │   ├── models.py        # Modelos SQLAlchemy
+│   │   │   ├── crud.py          # Operações CRUD
+│   │   │   └── base.py          # Configuração SQLAlchemy
+│   │   ├── models/              # Schemas Pydantic
+│   │   ├── config.py            # Configurações
+│   │   └── main.py              # Entry point FastAPI
+│   ├── alembic/                 # Migrations
+│   ├── scripts/
+│   │   ├── init_db.py           # Inicializar banco
+│   │   ├── seed_data.py         # Popular dados (com embeddings)
+│   │   └── test_*.py            # Scripts de teste manual
+│   └── docs/
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── ui/              # Componentes Shadcn/UI
+│   │   │   └── features/        # Componentes de negócio
+│   │   ├── hooks/               # Custom hooks React
+│   │   ├── lib/                 # Cliente API e utils
+│   │   ├── pages/               # Telas (Login, Dashboard)
+│   │   ├── types/               # Interfaces TypeScript
+│   │   └── App.tsx              # Componente principal
+│   └── package.json
+├── data/                        # Dados de exemplo
+├── docs/                        # Documentação adicional
+├── .env.example                 # Template de variáveis
+├── requirements.txt             # Dependências Python
+├── SPEC.md                      # Especificação técnica
+├── plano-de-acao.md             # Plano de desenvolvimento
+├── STATUS_PROJETO.md            # Status atual
+└── README.md                    # Este arquivo
 ```
 
 ---
 
-## 🎯 Funcionalidades
+## 🎯 Funcionalidades Implementadas
 
-### Recomendações Personalizadas
+### ✅ Backend Completo
 
-O sistema analisa o histórico de pedidos do usuário e gera recomendações baseadas em:
+- **Autenticação JWT:** Registro, login, proteção de rotas
+- **CRUD Completo:** Usuários, restaurantes, pedidos
+- **Sistema de Recomendações:**
+  - Embeddings semânticos (sentence-transformers)
+  - Cálculo de similaridade coseno
+  - Algoritmo personalizado com pesos (recência, rating)
+  - Cold start (fallback para restaurantes populares)
+  - Cache de preferências do usuário
+- **GenAI Integration:**
+  - Geração de insights contextualizados (Groq API)
+  - Retry com backoff exponencial
+  - Cache de insights (TTL 7 dias)
+  - Fallback para erros da API
+- **Validação:** Pydantic para validação de dados
+- **Documentação:** Swagger UI automático
 
-- Similaridade semântica (embeddings)
-- Padrões de preferência (culinárias favoritas)
-- Avaliações e ratings
-- Recência dos pedidos
+### ✅ Frontend Funcional
 
-### Insights com IA
+- **Autenticação:** Login e registro funcionando
+- **Dashboard:** Visualização de recomendações
+- **Cards de Restaurantes:** Exibição de detalhes e insights
+- **Proteção de Rotas:** Redirecionamento automático se não autenticado
+- **Integração Completa:** Cliente API com interceptors JWT
+- **UI Moderna:** Shadcn/UI + Tailwind CSS
 
-Cada recomendação inclui um insight gerado por LLM explicando:
+### ⏳ Pendente (Melhorias)
 
-- Por que o restaurante foi recomendado
-- Conexões com o histórico do usuário
-- Características relevantes
-
-### Performance
-
-- Cache de embeddings e recomendações
-- Busca vetorial otimizada com pgvector (PostgreSQL)
-- Processamento assíncrono
-- Respostas em < 1 segundo
-
-### Escalabilidade
-
-- Busca vetorial nativa no banco de dados (pgvector)
-- Suporta milhares de restaurantes sem degradação de performance
-- Arquitetura preparada para produção
-
----
-
-## 🐳 Executando com Docker
-
-Docker Compose é a forma mais recomendada para executar o projeto localmente:
-
-### Comandos Úteis
-
-```bash
-# Iniciar serviços
-docker-compose up -d
-
-# Ver logs
-docker-compose logs -f api
-
-# Parar serviços
-docker-compose down
-
-# Reconstruir containers
-docker-compose up -d --build
-
-# Executar comandos no container
-docker-compose exec api python scripts/init_db.py
-```
-
-### O que o Docker Compose inclui:
-
-- **PostgreSQL** com extensão pgvector para busca vetorial otimizada
-- **FastAPI Backend** com hot-reload
-- Configuração automática de variáveis de ambiente
-- Volumes persistentes para banco de dados
+- Melhorias de UX (toasts, loading states mais visuais)
+- Testes automatizados (pytest)
+- Deploy em produção
+- Histórico de pedidos no frontend (feature adicional)
 
 ---
 
-## 🔧 Configuração
+## 🔧 Configuração Detalhada
 
 ### Variáveis de Ambiente
 
-Veja `.env.example` para todas as variáveis necessárias. Principais:
+Veja `.env.example` para todas as variáveis. Principais:
 
-- `GROQ_API_KEY` - **Obrigatória** para geração de insights (gratuita, consulte seção abaixo)
-- `DATABASE_URL` - URL do banco de dados (configurada automaticamente com Docker)
-- `JWT_SECRET_KEY` - Chave para autenticação JWT
-- `SECRET_KEY` - Chave secreta da aplicação
+```env
+# Aplicação
+APP_NAME=TasteMatch
+ENVIRONMENT=development
+DEBUG=True
+SECRET_KEY=sua-chave-secreta-aqui
+
+# Banco de Dados
+DATABASE_URL=sqlite:///./tastematch.db
+
+# JWT
+JWT_SECRET_KEY=sua-chave-jwt-aqui
+JWT_ALGORITHM=HS256
+JWT_EXPIRATION_HOURS=24
+
+# Groq API (OBRIGATÓRIA para insights)
+GROQ_API_KEY=sua-groq-api-key-aqui
+
+# Embeddings
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+```
 
 ### Obter API Key do Groq
 
 A Groq API é **gratuita** e pode ser configurada em minutos:
 
 1. Acesse: https://console.groq.com
-2. Crie uma conta (gratuito, sem necessidade de cartão de crédito)
+2. Crie uma conta (gratuito, sem cartão de crédito)
 3. Gere uma API key na dashboard
 4. Copie a chave e adicione no arquivo `.env` como `GROQ_API_KEY=sua-chave-aqui`
 
-**Modelos disponíveis:**
-- `llama-3.1-70b-versatile` (melhor qualidade, recomendado)
-- `llama-3.1-8b-instant` (mais rápido, menor custo)
+**Modelo usado:** `llama-3.3-70b-versatile` (atualizado de llama-3.1 devido a depreciação)
 
 ---
 
 ## 🧪 Testes
 
+### Testes Manuais (Implementados)
+
 ```bash
 cd backend
-pytest tests/
+
+# Testar endpoints de autenticação
+python scripts/test_auth_endpoints.py
+
+# Testar endpoints de recomendações
+python scripts/test_recommendations_endpoints.py
 ```
 
-Para executar testes com Docker:
+### Testes Automatizados (Pendente)
+
 ```bash
-docker-compose exec api pytest tests/
+cd backend
+pytest tests/  # Quando implementado
 ```
 
 ---
 
-## 📦 Deploy
+## 🐛 Troubleshooting
 
-### Backend (Fly.io)
+### Problema: ImportError com sentence-transformers
+
+**Solução:** Verifique se as versões no `requirements.txt` estão corretas. Versões testadas:
+- `sentence-transformers==2.3.1`
+- `torch==2.1.2`
+- `transformers==4.35.2`
+
+### Problema: Erro de CORS no frontend
+
+**Solução:** Verifique se o backend está configurado para aceitar requisições do frontend. O CORS está configurado para:
+- `http://localhost:5173`
+- `http://localhost:5174`
+- `http://127.0.0.1:5174`
+
+### Problema: Token JWT inválido
+
+**Solução:** Verifique se o `JWT_SECRET_KEY` está configurado corretamente no `.env`. Se mudar, será necessário fazer login novamente.
+
+### Problema: Erro ao gerar insights (Groq API)
+
+**Solução:** 
+- Verifique se `GROQ_API_KEY` está configurada corretamente
+- Verifique sua quota na Groq (gratuita, mas tem limites)
+- O sistema tem retry automático e fallback genérico
+
+---
+
+## 📦 Deploy (Pendente)
+
+### Backend (Fly.io - Planejado)
 
 ```bash
 cd backend
@@ -273,16 +399,39 @@ fly secrets set DATABASE_URL=postgresql://...
 fly deploy
 ```
 
-**Nota:** Configure CORS no FastAPI para permitir requisições do frontend. Veja `SPEC.md` seção 12.3.
-
-### Frontend (Netlify)
+### Frontend (Netlify/Vercel - Planejado)
 
 ```bash
 cd frontend
-netlify deploy
+npm run build
+# Deploy via Netlify CLI ou interface web
 ```
 
-**Importante:** Configure as variáveis de ambiente do backend no Netlify (se necessário para proxy).
+**Nota:** Configure CORS no backend para permitir requisições do frontend em produção.
+
+---
+
+## 🎓 Contexto do Projeto
+
+Este projeto foi desenvolvido como parte da preparação para o **Programa de Estágio GenAI 2026 do iFood**, demonstrando:
+
+- ✅ Conhecimento em **agentes de IA**
+- ✅ Aplicação de **GenAI** para insights contextualizados
+- ✅ Uso de **embeddings e vetores semânticos** com busca otimizada
+- ✅ Integração de IA em sistemas reais com arquitetura escalável
+- ✅ Foco em **impacto de negócio** e boas práticas de engenharia
+- ✅ Stack moderna (FastAPI, React, TypeScript)
+
+---
+
+## 📊 Estatísticas do Projeto
+
+- **Arquivos Python:** ~30 arquivos
+- **Arquivos TypeScript/React:** ~18 arquivos
+- **Endpoints API:** 11 endpoints
+- **Modelos de Dados:** 5 modelos principais
+- **Linhas de Código:** ~1.860+ linhas
+- **Tempo de Desenvolvimento:** ~40-50 horas
 
 ---
 
@@ -297,38 +446,42 @@ Este é um projeto de demonstração técnica. Para desenvolvimento:
 
 ---
 
+## 📝 Notas de Versão
+
+**v1.0.0 (Atual)** - MVP Funcional:
+- ✅ Backend completo com FastAPI
+- ✅ Sistema de recomendações com embeddings
+- ✅ Integração GenAI (Groq API)
+- ✅ Frontend React + TypeScript + Shadcn/UI
+- ✅ Autenticação JWT completa
+- ✅ Cache de embeddings e insights
+- ✅ Retry robusto para API externa
+- ✅ Documentação completa (SPEC.md)
+
+**Próximas versões planejadas:**
+- Melhorias de UX no frontend
+- Testes automatizados
+- Deploy em produção
+- Features adicionais (histórico, favoritos)
+
+---
+
 ## 📄 Licença
 
 Projeto de demonstração técnica - Uso educacional.
 
 ---
 
-## 🎓 Contexto
+## 🔗 Links Úteis
 
-Este projeto foi desenvolvido como parte da preparação para o **Programa de Estágio GenAI 2026 do iFood**, demonstrando:
-
-- Conhecimento em agentes de IA
-- Aplicação de GenAI para insights contextualizados
-- Uso de embeddings e vetores semânticos com busca otimizada (pgvector)
-- Integração de IA em sistemas reais com arquitetura escalável
-- Foco em impacto de negócio e boas práticas de engenharia
-- DevOps básico (Docker, CI/CD ready)
+- **Documentação FastAPI:** https://fastapi.tiangolo.com
+- **Shadcn/UI:** https://ui.shadcn.com
+- **Groq API:** https://console.groq.com
+- **sentence-transformers:** https://www.sbert.net
 
 ---
 
 **Desenvolvido com ❤️ para demonstrar capacidade técnica em IA e desenvolvimento de sistemas.**
 
----
-
-## 📝 Notas de Versão
-
-**v1.1.0** - Melhorias implementadas:
-- ✅ Suporte a pgvector para busca vetorial otimizada
-- ✅ Docker Compose para desenvolvimento local
-- ✅ Segurança aprimorada (bcrypt explícito)
-- ✅ Documentação completa de padrões e configurações
-- ✅ Endpoint /health para monitoramento
-- ✅ Melhorias de escalabilidade e performance
-
-Para detalhes técnicos completos, consulte [SPEC.md](./SPEC.md).
-
+**Última atualização:** 24/11/2025  
+**Status:** ✅ MVP Funcional - Pronto para uso e testes

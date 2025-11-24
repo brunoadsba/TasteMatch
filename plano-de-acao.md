@@ -1,7 +1,8 @@
 # TasteMatch - Plano de Ação de Desenvolvimento
 
 > **Plano Executável Baseado em SPEC.md v1.1.0**  
-> Última atualização: 2025-01-27
+> Última atualização: 24/11/2025  
+> **Status:** Fases 1-9 completas (85% MVP) - Tarefas atualizadas conforme progresso real
 
 ---
 
@@ -60,42 +61,42 @@ Desenvolver o **TasteMatch** - Agente de Recomendação Inteligente que utiliza 
 #### Tarefas
 
 1. **Inicializar Repositório Git**
-   - [ ] Inicializar repositório Git: `git init`
-   - [ ] Configurar `.gitignore` (já existe, verificar e completar se necessário)
-   - [ ] Definir estratégia de branches (ex: `main`, `develop`, `feat/...`)
-   - [ ] Fazer commit inicial: estrutura de pastas e arquivos de configuração
+   - [x] Inicializar repositório Git: `git init`
+   - [x] Configurar `.gitignore` (já existe, verificar e completar se necessário)
+   - [x] Definir estratégia de branches (ex: `main`, `develop`, `feat/...`)
+   - [x] Fazer commit inicial: estrutura de pastas e arquivos de configuração
 
 2. **Criar Estrutura de Pastas**
-   - [ ] Criar diretório `tastematch/`
-   - [ ] Criar estrutura `backend/app/` conforme SPEC.md seção 8.1
-   - [ ] Criar estrutura `frontend/`
-   - [ ] Criar diretórios `data/`, `docs/`, `backend/tests/`, `backend/scripts/`
-   - [ ] Criar arquivos `__init__.py` necessários
+   - [x] Criar diretório `tastematch/`
+   - [x] Criar estrutura `backend/app/` conforme SPEC.md seção 8.1
+   - [x] Criar estrutura `frontend/`
+   - [x] Criar diretórios `data/`, `docs/`, `backend/tests/`, `backend/scripts/`
+   - [x] Criar arquivos `__init__.py` necessários
 
 3. **Configurar Ambiente de Desenvolvimento**
-   - [ ] Criar ambiente virtual Python 3.11+
-   - [ ] Criar `requirements.txt` com todas as dependências (SPEC.md seção 9.3)
-   - [ ] Instalar dependências: `pip install -r requirements.txt`
-   - [ ] Verificar instalação de sentence-transformers e PyTorch
+   - [x] Criar ambiente virtual Python 3.11+
+   - [x] Criar `requirements.txt` com todas as dependências (SPEC.md seção 9.3)
+   - [x] Instalar dependências: `pip install -r requirements.txt`
+   - [x] Verificar instalação de sentence-transformers e PyTorch
 
 4. **Configurar Docker (Opcional mas Recomendado)**
-   - [ ] Criar `docker-compose.yml` na raiz
-   - [ ] Criar `backend/Dockerfile`
-   - [ ] Configurar PostgreSQL com pgvector
-   - [ ] Testar `docker-compose up -d`
+   - [ ] Criar `docker-compose.yml` na raiz *(Não priorizado para MVP - usando SQLite local)*
+   - [ ] Criar `backend/Dockerfile` *(Não priorizado para MVP)*
+   - [ ] Configurar PostgreSQL com pgvector *(Para produção - SQLite usado em desenvolvimento)*
+   - [ ] Testar `docker-compose up -d` *(Não priorizado para MVP)*
 
 5. **Configurar Variáveis de Ambiente**
-   - [ ] Criar `.env.example` (já existe, verificar)
-   - [ ] Criar `.env` local
-   - [ ] Obter e configurar `GROQ_API_KEY`
-   - [ ] Configurar `DATABASE_URL`, `JWT_SECRET_KEY`, `SECRET_KEY`
+   - [x] Criar `.env.example` (já existe, verificar)
+   - [x] Criar `.env` local
+   - [x] Obter e configurar `GROQ_API_KEY`
+   - [x] Configurar `DATABASE_URL`, `JWT_SECRET_KEY`, `SECRET_KEY`
 
 6. **Inicializar Banco de Dados**
-   - [ ] Criar script `backend/scripts/init_db.py`
-   - [ ] Implementar criação de tabelas (SPEC.md seção 4.1)
-   - [ ] Configurar SQLAlchemy base (SPEC.md seção 8.1)
-   - [ ] Testar conexão com banco
-   - [ ] Se usar PostgreSQL: habilitar extensão pgvector
+   - [x] Criar script `backend/scripts/init_db.py`
+   - [x] Implementar criação de tabelas (SPEC.md seção 4.1)
+   - [x] Configurar SQLAlchemy base (SPEC.md seção 8.1)
+   - [x] Testar conexão com banco
+   - [ ] Se usar PostgreSQL: habilitar extensão pgvector *(SQLite usado em desenvolvimento, PostgreSQL para produção)*
 
 **Checkpoint Fase 1:**
 - ✅ Repositório Git inicializado e primeiro commit feito
@@ -115,49 +116,49 @@ Desenvolver o **TasteMatch** - Agente de Recomendação Inteligente que utiliza 
 #### Tarefas
 
 1. **Modelos SQLAlchemy (ORM)**
-   - [ ] Criar `backend/app/database/models.py`
-   - [ ] Implementar modelo `User` (SPEC.md seção 4.1)
-   - [ ] Implementar modelo `Restaurant` (com campo embedding)
-   - [ ] Implementar modelo `Order`
-   - [ ] Implementar modelo `Recommendation`
-   - [ ] Implementar modelo `UserPreferences`
-   - [ ] Configurar relacionamentos (Foreign Keys)
+   - [x] Criar `backend/app/database/models.py`
+   - [x] Implementar modelo `User` (SPEC.md seção 4.1)
+   - [x] Implementar modelo `Restaurant` (com campo embedding)
+   - [x] Implementar modelo `Order`
+   - [x] Implementar modelo `Recommendation`
+   - [x] Implementar modelo `UserPreferences`
+   - [x] Configurar relacionamentos (Foreign Keys)
 
 2. **Modelos Pydantic (Validação)**
-   - [ ] Criar `backend/app/models/user.py`
-   - [ ] Criar `backend/app/models/restaurant.py`
-   - [ ] Criar `backend/app/models/order.py`
-   - [ ] Criar `backend/app/models/recommendation.py`
-   - [ ] Implementar schemas: Base, Create, Response (SPEC.md seção 4.2)
+   - [x] Criar `backend/app/models/user.py`
+   - [x] Criar `backend/app/models/restaurant.py`
+   - [x] Criar `backend/app/models/order.py`
+   - [x] Criar `backend/app/models/recommendation.py`
+   - [x] Implementar schemas: Base, Create, Response (SPEC.md seção 4.2)
 
 3. **Configuração SQLAlchemy**
-   - [ ] Criar `backend/app/database/base.py`
-   - [ ] Configurar engine e session
-   - [ ] Configurar Base declarativa
-   - [ ] Implementar função `get_db()` para dependency injection
+   - [x] Criar `backend/app/database/base.py`
+   - [x] Configurar engine e session
+   - [x] Configurar Base declarativa
+   - [x] Implementar função `get_db()` para dependency injection
 
 4. **Configurar Migrations com Alembic**
-   - [ ] Inicializar Alembic: `alembic init alembic`
-   - [ ] Configurar Alembic para usar modelos SQLAlchemy
-   - [ ] Criar primeira migration: `alembic revision --autogenerate -m "Initial schema"`
-   - [ ] Aplicar migration: `alembic upgrade head`
-   - [ ] **Nota:** Usar migrations em vez de `db.create_all()` é prática profissional
+   - [x] Inicializar Alembic: `alembic init alembic`
+   - [x] Configurar Alembic para usar modelos SQLAlchemy
+   - [x] Criar primeira migration: `alembic revision --autogenerate -m "Initial schema"`
+   - [x] Aplicar migration: `alembic upgrade head`
+   - [x] **Nota:** Usar migrations em vez de `db.create_all()` é prática profissional
 
 5. **Operações CRUD Básicas**
-   - [ ] Criar `backend/app/database/crud.py` (ou módulos separados)
-   - [ ] Implementar CRUD para Users
-   - [ ] Implementar CRUD para Restaurants
-   - [ ] Implementar CRUD para Orders
-   - [ ] Testar operações básicas (criar, ler, atualizar)
+   - [x] Criar `backend/app/database/crud.py` (ou módulos separados)
+   - [x] Implementar CRUD para Users
+   - [x] Implementar CRUD para Restaurants
+   - [x] Implementar CRUD para Orders
+   - [x] Testar operações básicas (criar, ler, atualizar)
 
 6. **Scripts de Seeding com Embeddings**
-   - [ ] Criar `backend/scripts/seed_data.py`
-   - [ ] Gerar 20-30 restaurantes de exemplo (diferentes culinárias)
-   - [ ] Gerar 5-10 usuários de exemplo
-   - [ ] Gerar 50-100 pedidos de exemplo (histórico variado)
-   - [ ] **Integrar geração de embeddings no seed:** Gerar embeddings automaticamente para cada restaurante durante o seeding
-   - [ ] Executar seeding e validar dados
-   - [ ] **Otimização:** Fundir seed e geração de embeddings em um único passo para facilitar setup
+   - [x] Criar `backend/scripts/seed_data.py`
+   - [x] Gerar 20-30 restaurantes de exemplo (diferentes culinárias) *(25 restaurantes criados)*
+   - [x] Gerar 5-10 usuários de exemplo *(5 usuários criados)*
+   - [x] Gerar 50-100 pedidos de exemplo (histórico variado) *(67 pedidos criados)*
+   - [x] **Integrar geração de embeddings no seed:** Gerar embeddings automaticamente para cada restaurante durante o seeding
+   - [x] Executar seeding e validar dados
+   - [x] **Otimização:** Fundir seed e geração de embeddings em um único passo para facilitar setup
 
 **Checkpoint Fase 2:**
 - ✅ Modelos SQLAlchemy criados e testados
@@ -176,39 +177,39 @@ Desenvolver o **TasteMatch** - Agente de Recomendação Inteligente que utiliza 
 #### Tarefas
 
 1. **Módulo de Segurança**
-   - [ ] Criar `backend/app/core/security.py`
-   - [ ] Implementar hash de senhas com bcrypt (usar `passlib[bcrypt]`)
-   - [ ] Implementar função `verify_password()`
-   - [ ] Implementar função `get_password_hash()`
-   - [ ] Implementar geração de JWT tokens
-   - [ ] Implementar validação de JWT tokens
-   - [ ] Configurar expiração de tokens (24h padrão)
+   - [x] Criar `backend/app/core/security.py`
+   - [x] Implementar hash de senhas com bcrypt (usar bcrypt diretamente)
+   - [x] Implementar função `verify_password()`
+   - [x] Implementar função `get_password_hash()`
+   - [x] Implementar geração de JWT tokens
+   - [x] Implementar validação de JWT tokens
+   - [x] Configurar expiração de tokens (24h padrão)
 
 2. **Dependências de Autenticação**
-   - [ ] Criar `backend/app/api/deps.py`
-   - [ ] Implementar `get_current_user()` (dependency para FastAPI)
-   - [ ] Implementar validação de token JWT
-   - [ ] Tratar erros de autenticação (401 Unauthorized)
+   - [x] Criar `backend/app/api/deps.py`
+   - [x] Implementar `get_current_user()` (dependency para FastAPI)
+   - [x] Implementar validação de token JWT
+   - [x] Tratar erros de autenticação (401 Unauthorized)
 
 3. **Endpoints de Autenticação**
-   - [ ] Criar `backend/app/api/routes/auth.py`
-   - [ ] Implementar `POST /auth/register` (SPEC.md seção 5.3)
-   - [ ] Implementar `POST /auth/login` (SPEC.md seção 5.3)
-   - [ ] Validar dados de entrada (Pydantic)
-   - [ ] Retornar token JWT na resposta
-   - [ ] Testar registro e login manualmente
+   - [x] Criar `backend/app/api/routes/auth.py`
+   - [x] Implementar `POST /auth/register` (SPEC.md seção 5.3)
+   - [x] Implementar `POST /auth/login` (SPEC.md seção 5.3)
+   - [x] Validar dados de entrada (Pydantic)
+   - [x] Retornar token JWT na resposta
+   - [x] Testar registro e login manualmente
 
 4. **Endpoint Health Check**
-   - [ ] Criar endpoint `GET /health` (SPEC.md seção 5.3)
-   - [ ] Verificar conexão com banco de dados
-   - [ ] Retornar status da aplicação
+   - [x] Criar endpoint `GET /health` (SPEC.md seção 5.3)
+   - [x] Verificar conexão com banco de dados
+   - [x] Retornar status da aplicação
 
 5. **Configuração FastAPI Base**
-   - [ ] Criar `backend/app/main.py`
-   - [ ] Configurar app FastAPI
-   - [ ] Incluir routers de autenticação
-   - [ ] Configurar CORS (SPEC.md seção 12.3)
-   - [ ] Testar servidor rodando (`uvicorn app.main:app --reload`)
+   - [x] Criar `backend/app/main.py`
+   - [x] Configurar app FastAPI
+   - [x] Incluir routers de autenticação
+   - [x] Configurar CORS (SPEC.md seção 12.3) *(Configurado para localhost:5173, localhost:5174, 127.0.0.1:5174)*
+   - [x] Testar servidor rodando (`uvicorn app.main:app --reload`)
 
 **Checkpoint Fase 3:**
 - ✅ Autenticação JWT funcionando
@@ -226,32 +227,32 @@ Desenvolver o **TasteMatch** - Agente de Recomendação Inteligente que utiliza 
 #### Tarefas
 
 1. **Endpoints de Usuários**
-   - [ ] Criar `backend/app/api/routes/users.py`
-   - [ ] Implementar `GET /api/users/me` (SPEC.md seção 5.7)
-   - [ ] Implementar `GET /api/users/me/preferences` (SPEC.md seção 5.7)
-   - [ ] Proteger endpoints com autenticação
-   - [ ] Testar endpoints com token JWT
+   - [x] Criar `backend/app/api/routes/users.py`
+   - [x] Implementar `GET /api/users/me` (SPEC.md seção 5.7)
+   - [x] Implementar `GET /api/users/me/preferences` (SPEC.md seção 5.7)
+   - [x] Proteger endpoints com autenticação
+   - [x] Testar endpoints com token JWT
 
 2. **Endpoints de Restaurantes**
-   - [ ] Criar `backend/app/api/routes/restaurants.py`
-   - [ ] Implementar `GET /api/restaurants` (listagem com paginação) (SPEC.md seção 5.5)
-   - [ ] Implementar `GET /api/restaurants/{restaurant_id}` (detalhes) (SPEC.md seção 5.5)
-   - [ ] Implementar filtros (cuisine_type, min_rating)
-   - [ ] Testar endpoints
+   - [x] Criar `backend/app/api/routes/restaurants.py`
+   - [x] Implementar `GET /api/restaurants` (listagem com paginação) (SPEC.md seção 5.5)
+   - [x] Implementar `GET /api/restaurants/{restaurant_id}` (detalhes) (SPEC.md seção 5.5)
+   - [x] Implementar filtros (cuisine_type, min_rating)
+   - [x] Testar endpoints
 
 3. **Endpoints de Pedidos**
-   - [ ] Criar `backend/app/api/routes/orders.py`
-   - [ ] Implementar `GET /api/orders` (histórico do usuário) (SPEC.md seção 5.6)
-   - [ ] Implementar `POST /api/orders` (criar pedido) (SPEC.md seção 5.6)
-   - [ ] Validar dados de entrada
-   - [ ] Associar pedido ao usuário autenticado
-   - [ ] Testar criação e listagem de pedidos
+   - [x] Criar `backend/app/api/routes/orders.py`
+   - [x] Implementar `GET /api/orders` (histórico do usuário) (SPEC.md seção 5.6)
+   - [x] Implementar `POST /api/orders` (criar pedido) (SPEC.md seção 5.6)
+   - [x] Validar dados de entrada
+   - [x] Associar pedido ao usuário autenticado
+   - [x] Testar criação e listagem de pedidos
 
 4. **Integração de Rotas no Main**
-   - [ ] Incluir router de users no `main.py`
-   - [ ] Incluir router de restaurants no `main.py`
-   - [ ] Incluir router de orders no `main.py`
-   - [ ] Testar todos os endpoints via Swagger (`/docs`)
+   - [x] Incluir router de users no `main.py`
+   - [x] Incluir router de restaurants no `main.py`
+   - [x] Incluir router de orders no `main.py`
+   - [x] Testar todos os endpoints via Swagger (`/docs`)
 
 **Checkpoint Fase 4:**
 - ✅ Todos os endpoints CRUD básicos funcionando
@@ -269,29 +270,29 @@ Desenvolver o **TasteMatch** - Agente de Recomendação Inteligente que utiliza 
 #### Tarefas
 
 1. **Serviço de Embeddings**
-   - [ ] Criar `backend/app/core/embeddings.py`
-   - [ ] Implementar carregamento do modelo sentence-transformers
-   - [ ] Implementar função `generate_restaurant_embedding()` (SPEC.md seção 6.1)
-   - [ ] Testar geração de embedding para um restaurante
+   - [x] Criar `backend/app/core/embeddings.py`
+   - [x] Implementar carregamento do modelo sentence-transformers
+   - [x] Implementar função `generate_restaurant_embedding()` (SPEC.md seção 6.1)
+   - [x] Testar geração de embedding para um restaurante
 
 2. **Script de Geração de Embeddings (Se não integrado no Seed)**
-   - [ ] Criar `backend/scripts/generate_embeddings.py` (opcional se já integrado no seed)
-   - [ ] Ler todos os restaurantes do banco sem embedding
-   - [ ] Gerar embedding para cada restaurante
-   - [ ] Armazenar embeddings no banco (Vector(384) ou JSON)
-   - [ ] Executar script e validar embeddings gerados
-   - [ ] **Nota:** Preferir gerar embeddings durante o seed (ver Fase 2, tarefa 6)
+   - [ ] Criar `backend/scripts/generate_embeddings.py` *(Não necessário - embeddings integrados no seed)*
+   - [x] Ler todos os restaurantes do banco sem embedding *(Integrado no seed)*
+   - [x] Gerar embedding para cada restaurante *(Integrado no seed)*
+   - [x] Armazenar embeddings no banco (Vector(384) ou JSON) *(JSON para SQLite)*
+   - [x] Executar script e validar embeddings gerados
+   - [x] **Nota:** Preferir gerar embeddings durante o seed (ver Fase 2, tarefa 6) *(Implementado)*
 
 3. **Otimização com pgvector (Produção)**
-   - [ ] Se usando PostgreSQL: configurar tipo Vector(384)
-   - [ ] Atualizar modelo Restaurant para usar Vector
-   - [ ] Testar armazenamento de embeddings como Vector
-   - [ ] Documentar diferença entre SQLite (JSON) e PostgreSQL (Vector)
+   - [ ] Se usando PostgreSQL: configurar tipo Vector(384) *(Para produção - SQLite em desenvolvimento)*
+   - [ ] Atualizar modelo Restaurant para usar Vector *(Para produção)*
+   - [ ] Testar armazenamento de embeddings como Vector *(Para produção)*
+   - [x] Documentar diferença entre SQLite (JSON) e PostgreSQL (Vector)
 
 4. **Cache de Embeddings**
-   - [ ] Verificar que embeddings são gerados uma vez
-   - [ ] Implementar lógica para não recalcular embeddings existentes
-   - [ ] Validar performance de leitura de embeddings
+   - [x] Verificar que embeddings são gerados uma vez
+   - [x] Implementar lógica para não recalcular embeddings existentes
+   - [x] Validar performance de leitura de embeddings
 
 **Checkpoint Fase 5:**
 - ✅ Embeddings sendo gerados corretamente
@@ -309,36 +310,36 @@ Desenvolver o **TasteMatch** - Agente de Recomendação Inteligente que utiliza 
 #### Tarefas
 
 1. **Cálculo de Preferências do Usuário**
-   - [ ] Criar `backend/app/core/recommender.py`
-   - [ ] Implementar `calculate_user_preference_embedding()` (SPEC.md seção 6.1)
-   - [ ] Implementar `calculate_weight()` (recência e rating)
-   - [ ] Testar cálculo de embedding do usuário
+   - [x] Criar `backend/app/core/recommender.py`
+   - [x] Implementar `calculate_user_preference_embedding()` (SPEC.md seção 6.1)
+   - [x] Implementar `calculate_weight()` (recência e rating)
+   - [x] Testar cálculo de embedding do usuário
 
 2. **Extração de Padrões do Usuário**
-   - [ ] Implementar `extract_user_patterns()` (SPEC.md seção 6.4)
-   - [ ] Extrair culinárias favoritas
-   - [ ] Extrair dias/horários preferidos
-   - [ ] Calcular ticket médio
-   - [ ] Testar extração de padrões
+   - [x] Implementar `extract_user_patterns()` (SPEC.md seção 6.4)
+   - [x] Extrair culinárias favoritas
+   - [x] Extrair dias/horários preferidos
+   - [x] Calcular ticket médio
+   - [x] Testar extração de padrões
 
 3. **Cálculo de Similaridade**
-   - [ ] Se PostgreSQL: implementar busca com pgvector (SPEC.md seção 6.1)
-   - [ ] Se SQLite: implementar cálculo em memória com scikit-learn
-   - [ ] Implementar função `get_similar_restaurants()`
-   - [ ] Testar cálculo de similaridade
+   - [ ] Se PostgreSQL: implementar busca com pgvector (SPEC.md seção 6.1) *(Para produção)*
+   - [x] Se SQLite: implementar cálculo em memória com scikit-learn
+   - [x] Implementar função `get_similar_restaurants()` *(Integrado em generate_recommendations)*
+   - [x] Testar cálculo de similaridade
 
 4. **Algoritmo de Recomendação Completo**
-   - [ ] Implementar `generate_recommendations()` (SPEC.md seção 6.1)
-   - [ ] Implementar filtros (rating mínimo, excluir recentes)
-   - [ ] Implementar ordenação por similaridade
-   - [ ] Implementar fallback para cold start (SPEC.md seção 6.3)
-   - [ ] Testar com usuário com histórico
-   - [ ] Testar com usuário novo (cold start)
+   - [x] Implementar `generate_recommendations()` (SPEC.md seção 6.1)
+   - [x] Implementar filtros (rating mínimo, excluir recentes)
+   - [x] Implementar ordenação por similaridade
+   - [x] Implementar fallback para cold start (SPEC.md seção 6.3)
+   - [x] Testar com usuário com histórico
+   - [x] Testar com usuário novo (cold start)
 
 5. **Cache de Preferências do Usuário**
-   - [ ] Implementar armazenamento em `user_preferences`
-   - [ ] Implementar lógica de atualização (quando necessário)
-   - [ ] Implementar flag `refresh` para forçar recálculo
+   - [x] Implementar armazenamento em `user_preferences`
+   - [x] Implementar lógica de atualização (quando necessário)
+   - [x] Implementar flag `refresh` para forçar recálculo
 
 **Checkpoint Fase 6:**
 - ✅ Algoritmo de recomendação gerando resultados
@@ -356,36 +357,36 @@ Desenvolver o **TasteMatch** - Agente de Recomendação Inteligente que utiliza 
 #### Tarefas
 
 1. **Serviço de LLM**
-   - [ ] Criar `backend/app/core/llm_service.py`
-   - [ ] Configurar cliente Groq (SPEC.md seção 7.4)
-   - [ ] Implementar função `generate_insight()` (SPEC.md seção 7.4)
-   - [ ] Configurar modelo `llama-3.1-70b-versatile`
-   - [ ] **Implementar Retry com Backoff Exponencial:** Adicionar tratamento de erros robusto para timeouts e falhas da API Groq
-   - [ ] Testar chamada básica à API Groq
-   - [ ] Testar retry em cenários de falha simulados
+   - [x] Criar `backend/app/core/llm_service.py`
+   - [x] Configurar cliente Groq (SPEC.md seção 7.4)
+   - [x] Implementar função `generate_insight()` (SPEC.md seção 7.4)
+   - [x] Configurar modelo `llama-3.3-70b-versatile` *(Atualizado de llama-3.1-70b-versatile devido a depreciação)*
+   - [x] **Implementar Retry com Backoff Exponencial:** Adicionar tratamento de erros robusto para timeouts e falhas da API Groq
+   - [x] Testar chamada básica à API Groq
+   - [x] Testar retry em cenários de falha simulados
 
 2. **Templates de Prompts**
-   - [ ] Implementar função `build_insight_prompt()` (SPEC.md seção 7.3)
-   - [ ] Criar template base do prompt
-   - [ ] Integrar contexto do usuário (padrões, histórico)
-   - [ ] Integrar informações do restaurante
-   - [ ] Testar geração de prompt completo
+   - [x] Implementar função `build_insight_prompt()` (SPEC.md seção 7.3)
+   - [x] Criar template base do prompt
+   - [x] Integrar contexto do usuário (padrões, histórico)
+   - [x] Integrar informações do restaurante
+   - [x] Testar geração de prompt completo
 
 3. **Geração de Insights**
-   - [ ] Integrar geração de insights no fluxo de recomendações
-   - [ ] Implementar tratamento de erros (fallback genérico)
-   - [ ] Testar geração de insights para recomendações
+   - [x] Integrar geração de insights no fluxo de recomendações
+   - [x] Implementar tratamento de erros (fallback genérico)
+   - [x] Testar geração de insights para recomendações
 
 4. **Cache de Insights**
-   - [ ] Implementar `get_cached_insight()` (SPEC.md seção 7.5)
-   - [ ] Armazenar insights na tabela `recommendations`
-   - [ ] Implementar TTL de 7 dias
-   - [ ] Validar cache funcionando
+   - [x] Implementar `get_cached_insight()` (SPEC.md seção 7.5)
+   - [x] Armazenar insights na tabela `recommendations`
+   - [x] Implementar TTL de 7 dias
+   - [x] Validar cache funcionando
 
 5. **Batching de Insights (Opcional)**
-   - [ ] Implementar geração assíncrona em batch (SPEC.md seção 7.5)
-   - [ ] Otimizar para gerar múltiplos insights em paralelo
-   - [ ] Testar performance
+   - [ ] Implementar geração assíncrona em batch (SPEC.md seção 7.5) *(Opcional - não priorizado para MVP)*
+   - [ ] Otimizar para gerar múltiplos insights em paralelo *(Opcional - não priorizado para MVP)*
+   - [ ] Testar performance *(Opcional - não priorizado para MVP)*
 
 **Checkpoint Fase 7:**
 - ✅ LLM gerando insights contextualizados
@@ -404,23 +405,23 @@ Desenvolver o **TasteMatch** - Agente de Recomendação Inteligente que utiliza 
 #### Tarefas
 
 1. **Endpoint Principal**
-   - [ ] Criar `backend/app/api/routes/recommendations.py`
-   - [ ] Implementar `GET /api/recommendations` (SPEC.md seção 5.4)
-   - [ ] Integrar com lógica de recomendação
-   - [ ] Integrar com geração de insights
-   - [ ] Implementar parâmetros `limit` e `refresh`
-   - [ ] Retornar formato correto (SPEC.md seção 5.4)
+   - [x] Criar `backend/app/api/routes/recommendations.py`
+   - [x] Implementar `GET /api/recommendations` (SPEC.md seção 5.4)
+   - [x] Integrar com lógica de recomendação
+   - [x] Integrar com geração de insights
+   - [x] Implementar parâmetros `limit` e `refresh`
+   - [x] Retornar formato correto (SPEC.md seção 5.4)
 
 2. **Endpoint de Insight Específico**
-   - [ ] Implementar `GET /api/recommendations/{restaurant_id}/insight` (SPEC.md seção 5.4)
-   - [ ] Gerar insight sob demanda
-   - [ ] Testar endpoint
+   - [x] Implementar `GET /api/recommendations/{restaurant_id}/insight` (SPEC.md seção 5.4)
+   - [x] Gerar insight sob demanda
+   - [x] Testar endpoint
 
 3. **Integração e Testes**
-   - [ ] Incluir router de recommendations no `main.py`
-   - [ ] Testar endpoint completo end-to-end
-   - [ ] Validar resposta JSON
-   - [ ] Testar com diferentes usuários e históricos
+   - [x] Incluir router de recommendations no `main.py`
+   - [x] Testar endpoint completo end-to-end
+   - [x] Validar resposta JSON
+   - [x] Testar com diferentes usuários e históricos
 
 **Checkpoint Fase 8:**
 - ✅ Endpoint `/api/recommendations` funcionando
@@ -442,48 +443,48 @@ Desenvolver o **TasteMatch** - Agente de Recomendação Inteligente que utiliza 
 #### Tarefas
 
 1. **Escolher Stack e Configurar**
-   - [ ] Decidir: React + Vite + Shadcn/UI OU Vanilla JS
-   - [ ] Se React: Configurar projeto Vite + React
-   - [ ] Se React: Instalar Shadcn/UI e componentes necessários
-   - [ ] Se Vanilla: Criar estrutura HTML base
+   - [x] Decidir: React + Vite + Shadcn/UI OU Vanilla JS *(React + Vite + Shadcn/UI escolhido)*
+   - [x] Se React: Configurar projeto Vite + React
+   - [x] Se React: Instalar Shadcn/UI e componentes necessários
+   - [ ] Se Vanilla: Criar estrutura HTML base *(Não aplicável - React escolhido)*
 
 2. **Estrutura HTML/Componentes Base**
-   - [ ] Criar `frontend/index.html`
-   - [ ] Criar estrutura básica (header, main, footer)
-   - [ ] Adicionar seções: login, dashboard, recomendações
+   - [x] Criar `frontend/index.html` *(Via Vite)*
+   - [x] Criar estrutura básica (header, main, footer) *(Componentes React criados)*
+   - [x] Adicionar seções: login, dashboard, recomendações
 
 3. **Cliente HTTP para API**
-   - [ ] Criar `frontend/api.js`
-   - [ ] Implementar função de login
-   - [ ] Implementar função de registro
-   - [ ] Implementar função de buscar recomendações
-   - [ ] Implementar armazenamento de token (localStorage)
+   - [x] Criar `frontend/api.js` *(Criado como `lib/api.ts` - TypeScript)*
+   - [x] Implementar função de login
+   - [x] Implementar função de registro
+   - [x] Implementar função de buscar recomendações
+   - [x] Implementar armazenamento de token (localStorage)
 
 4. **Página de Login**
-   - [ ] Criar formulário de login
-   - [ ] Integrar com endpoint `/auth/login`
-   - [ ] Redirecionar para dashboard após login
-   - [ ] Tratar erros de autenticação
+   - [x] Criar formulário de login
+   - [x] Integrar com endpoint `/auth/login`
+   - [x] Redirecionar para dashboard após login
+   - [x] Tratar erros de autenticação
 
 5. **Dashboard de Recomendações**
-   - [ ] Criar layout do dashboard
-   - [ ] Exibir lista de recomendações
-   - [ ] Exibir insights para cada recomendação
-   - [ ] Mostrar similarity_score
-   - [ ] Adicionar botão de refresh
+   - [x] Criar layout do dashboard
+   - [x] Exibir lista de recomendações
+   - [x] Exibir insights para cada recomendação
+   - [x] Mostrar similarity_score
+   - [x] Adicionar botão de refresh
 
 6. **Estilização**
-   - [ ] Criar `frontend/styles.css`
-   - [ ] Estilizar formulário de login
-   - [ ] Estilizar cards de recomendações
-   - [ ] Adicionar responsividade básica
-   - [ ] Melhorar UX (loading states, mensagens de erro)
+   - [x] Criar `frontend/styles.css` *(Via Tailwind CSS e `index.css`)*
+   - [x] Estilizar formulário de login
+   - [x] Estilizar cards de recomendações
+   - [x] Adicionar responsividade básica
+   - [ ] Melhorar UX (loading states, mensagens de erro) *(Parcial - melhorias pendentes)*
 
 7. **Funcionalidades Adicionais**
-   - [ ] Exibir histórico de pedidos
-   - [ ] Exibir preferências do usuário
-   - [ ] Adicionar logout
-   - [ ] Proteger rotas (redirecionar se não autenticado)
+   - [ ] Exibir histórico de pedidos *(Feature adicional - não MVP)*
+   - [ ] Exibir preferências do usuário *(Feature adicional - não MVP)*
+   - [x] Adicionar logout
+   - [x] Proteger rotas (redirecionar se não autenticado)
 
 **Checkpoint Fase 9:**
 - ✅ Frontend exibindo recomendações
@@ -501,35 +502,35 @@ Desenvolver o **TasteMatch** - Agente de Recomendação Inteligente que utiliza 
 #### Tarefas
 
 1. **Configuração de Testes**
-   - [ ] Criar `backend/tests/conftest.py`
-   - [ ] Configurar fixtures (db, client, user de teste)
-   - [ ] Configurar banco de dados de teste
-   - [ ] Configurar pytest-asyncio
+   - [ ] Criar `backend/tests/conftest.py` *(Pendente - testes automatizados)*
+   - [ ] Configurar fixtures (db, client, user de teste) *(Pendente)*
+   - [ ] Configurar banco de dados de teste *(Pendente)*
+   - [ ] Configurar pytest-asyncio *(Pendente)*
 
 2. **Testes de Autenticação**
-   - [ ] Criar `backend/tests/test_auth.py`
-   - [ ] Testar registro de usuário
-   - [ ] Testar login
-   - [ ] Testar validação de token
-   - [ ] Testar proteção de rotas
+   - [x] Criar `backend/tests/test_auth.py` *(Criado como script manual: `scripts/test_auth_endpoints.py`)*
+   - [x] Testar registro de usuário *(Teste manual implementado)*
+   - [x] Testar login *(Teste manual implementado)*
+   - [x] Testar validação de token *(Teste manual implementado)*
+   - [x] Testar proteção de rotas *(Teste manual implementado)*
 
 3. **Testes de Recomendações**
-   - [ ] Criar `backend/tests/test_recommendations.py`
-   - [ ] Testar geração de recomendações
-   - [ ] Testar cold start (usuário sem histórico)
-   - [ ] Testar cálculo de similaridade
-   - [ ] Validar formato de resposta
+   - [x] Criar `backend/tests/test_recommendations.py` *(Criado como script manual: `scripts/test_recommendations_endpoints.py`)*
+   - [x] Testar geração de recomendações *(Teste manual implementado)*
+   - [x] Testar cold start (usuário sem histórico) *(Teste manual implementado)*
+   - [x] Testar cálculo de similaridade *(Teste manual implementado)*
+   - [x] Validar formato de resposta *(Teste manual implementado)*
 
 4. **Testes de Integração**
-   - [ ] Testar fluxo completo: login → recomendações → insights
-   - [ ] Testar criação de pedido e impacto nas recomendações
-   - [ ] Validar performance (tempo de resposta < 1s)
+   - [x] Testar fluxo completo: login → recomendações → insights *(Validação manual realizada)*
+   - [x] Testar criação de pedido e impacto nas recomendações *(Validação manual realizada)*
+   - [ ] Validar performance (tempo de resposta < 1s) *(Pendente - métricas automatizadas)*
 
 5. **Validação Manual**
-   - [ ] Testar com diferentes históricos de usuários
-   - [ ] Validar que recomendações fazem sentido
-   - [ ] Validar qualidade dos insights gerados
-   - [ ] Testar edge cases (usuário novo, sem restaurantes, etc.)
+   - [x] Testar com diferentes históricos de usuários
+   - [x] Validar que recomendações fazem sentido
+   - [x] Validar qualidade dos insights gerados
+   - [x] Testar edge cases (usuário novo, sem restaurantes, etc.)
 
 **Checkpoint Fase 10:**
 - ✅ Testes automatizados passando
@@ -547,28 +548,28 @@ Desenvolver o **TasteMatch** - Agente de Recomendação Inteligente que utiliza 
 #### Tarefas
 
 1. **Tratamento de Erros**
-   - [ ] Adicionar tratamento de erros em todos os endpoints
-   - [ ] Implementar mensagens de erro claras
-   - [ ] Adicionar logging estruturado (SPEC.md seção 10.3)
-   - [ ] Tratar erros de API externa (Groq)
+   - [x] Adicionar tratamento de erros em todos os endpoints
+   - [x] Implementar mensagens de erro claras
+   - [ ] Adicionar logging estruturado (SPEC.md seção 10.3) *(Pendente - logging básico existente)*
+   - [x] Tratar erros de API externa (Groq) *(Retry com backoff implementado)*
 
 2. **Otimização de Performance**
-   - [ ] Validar cache de embeddings funcionando
-   - [ ] Validar cache de preferências do usuário
-   - [ ] Otimizar queries ao banco (indexes se necessário)
-   - [ ] Validar tempo de resposta < 1 segundo
+   - [x] Validar cache de embeddings funcionando
+   - [x] Validar cache de preferências do usuário
+   - [ ] Otimizar queries ao banco (indexes se necessário) *(Pendente - otimização adicional)*
+   - [ ] Validar tempo de resposta < 1 segundo *(Pendente - métricas automatizadas)*
 
 3. **Melhorias de UX**
-   - [ ] Adicionar loading states no frontend
-   - [ ] Melhorar mensagens de erro no frontend
-   - [ ] Adicionar feedback visual (toasts, alerts)
-   - [ ] Melhorar responsividade
+   - [x] Adicionar loading states no frontend *(Parcial - básico implementado)*
+   - [ ] Melhorar mensagens de erro no frontend *(Pendente - melhorias pendentes)*
+   - [ ] Adicionar feedback visual (toasts, alerts) *(Pendente - não implementado)*
+   - [x] Melhorar responsividade *(Básico implementado)*
 
 4. **Documentação**
-   - [ ] Atualizar README com instruções finais
-   - [ ] Documentar endpoints adicionais (se houver)
-   - [ ] Adicionar comentários no código complexo
-   - [ ] Criar guia de troubleshooting básico
+   - [ ] Atualizar README com instruções finais *(Pendente - documentação básica existe)*
+   - [x] Documentar endpoints adicionais (se houver) *(Swagger UI automático)*
+   - [x] Adicionar comentários no código complexo
+   - [ ] Criar guia de troubleshooting básico *(Pendente)*
 
 **Checkpoint Fase 11:**
 - ✅ Tratamento de erros robusto
@@ -621,98 +622,98 @@ Desenvolver o **TasteMatch** - Agente de Recomendação Inteligente que utiliza 
 ## ✅ Checklist Executável Completo
 
 ### Setup e Infraestrutura
-- [ ] Repositório Git inicializado com histórico de commits organizado
-- [ ] Estrutura de pastas criada conforme SPEC.md seção 8.1
-- [ ] Ambiente virtual Python 3.11+ criado e ativado
-- [ ] `requirements.txt` criado com todas as dependências
-- [ ] Dependências instaladas (incluindo sentence-transformers)
-- [ ] Docker Compose configurado (opcional mas recomendado)
-- [ ] `.env` configurado com todas as variáveis
-- [ ] `GROQ_API_KEY` obtida e configurada
-- [ ] Banco de dados inicializado (SQLite ou PostgreSQL)
-- [ ] Extensão pgvector habilitada (se PostgreSQL)
+- [x] Repositório Git inicializado com histórico de commits organizado
+- [x] Estrutura de pastas criada conforme SPEC.md seção 8.1
+- [x] Ambiente virtual Python 3.11+ criado e ativado
+- [x] `requirements.txt` criado com todas as dependências
+- [x] Dependências instaladas (incluindo sentence-transformers)
+- [ ] Docker Compose configurado (opcional mas recomendado) *(Não priorizado para MVP - SQLite usado)*
+- [x] `.env` configurado com todas as variáveis
+- [x] `GROQ_API_KEY` obtida e configurada
+- [x] Banco de dados inicializado (SQLite ou PostgreSQL) *(SQLite usado em desenvolvimento)*
+- [ ] Extensão pgvector habilitada (se PostgreSQL) *(Para produção - SQLite em dev)*
 
 ### Backend - Modelos e Dados
-- [ ] Modelos SQLAlchemy criados (User, Restaurant, Order, Recommendation, UserPreferences)
-- [ ] Alembic configurado para migrations
-- [ ] Migrations criadas e aplicadas (não usar db.create_all())
-- [ ] Modelos Pydantic criados (schemas de validação)
-- [ ] Configuração SQLAlchemy (base.py, get_db)
-- [ ] CRUD básico implementado
-- [ ] Scripts de seeding criados e executados (com geração de embeddings integrada)
-- [ ] Dados de exemplo populados no banco
+- [x] Modelos SQLAlchemy criados (User, Restaurant, Order, Recommendation, UserPreferences)
+- [x] Alembic configurado para migrations
+- [x] Migrations criadas e aplicadas (não usar db.create_all())
+- [x] Modelos Pydantic criados (schemas de validação)
+- [x] Configuração SQLAlchemy (base.py, get_db)
+- [x] CRUD básico implementado
+- [x] Scripts de seeding criados e executados (com geração de embeddings integrada)
+- [x] Dados de exemplo populados no banco *(25 restaurantes, 5 usuários, 67 pedidos)*
 
 ### Backend - Autenticação
-- [ ] Módulo de segurança implementado (bcrypt, JWT)
-- [ ] Endpoints `/auth/register` e `/auth/login` funcionando
-- [ ] Proteção de rotas com JWT implementada
-- [ ] Endpoint `/health` implementado
-- [ ] CORS configurado
+- [x] Módulo de segurança implementado (bcrypt, JWT)
+- [x] Endpoints `/auth/register` e `/auth/login` funcionando
+- [x] Proteção de rotas com JWT implementada
+- [x] Endpoint `/health` implementado
+- [x] CORS configurado *(localhost:5173, localhost:5174, 127.0.0.1:5174)*
 
 ### Backend - Endpoints CRUD
-- [ ] `GET /api/users/me` implementado
-- [ ] `GET /api/users/me/preferences` implementado
-- [ ] `GET /api/restaurants` implementado (com paginação e filtros)
-- [ ] `GET /api/restaurants/{id}` implementado
-- [ ] `GET /api/orders` implementado
-- [ ] `POST /api/orders` implementado
-- [ ] Todos os endpoints testados via Swagger
+- [x] `GET /api/users/me` implementado
+- [x] `GET /api/users/me/preferences` implementado
+- [x] `GET /api/restaurants` implementado (com paginação e filtros)
+- [x] `GET /api/restaurants/{id}` implementado
+- [x] `GET /api/orders` implementado
+- [x] `POST /api/orders` implementado
+- [x] Todos os endpoints testados via Swagger
 
 ### Backend - Sistema de Recomendações
-- [ ] Serviço de embeddings implementado
-- [ ] Script de geração de embeddings executado
-- [ ] Embeddings armazenados no banco
-- [ ] Cálculo de preferências do usuário implementado
-- [ ] Extração de padrões do usuário implementada
-- [ ] Cálculo de similaridade implementado (pgvector ou scikit-learn)
-- [ ] Algoritmo de recomendação completo implementado
-- [ ] Cold start (fallback) implementado
-- [ ] Cache de preferências implementado
+- [x] Serviço de embeddings implementado
+- [x] Script de geração de embeddings executado *(Integrado no seed)*
+- [x] Embeddings armazenados no banco
+- [x] Cálculo de preferências do usuário implementado
+- [x] Extração de padrões do usuário implementada
+- [x] Cálculo de similaridade implementado (pgvector ou scikit-learn) *(scikit-learn para SQLite)*
+- [x] Algoritmo de recomendação completo implementado
+- [x] Cold start (fallback) implementado
+- [x] Cache de preferências implementado
 
 ### Backend - GenAI (LLM)
-- [ ] Serviço de LLM (Groq) implementado
-- [ ] Retry com backoff exponencial implementado
-- [ ] Templates de prompts criados
-- [ ] Geração de insights implementada
-- [ ] Cache de insights implementado
-- [ ] Tratamento de erros robusto (fallback + retry)
+- [x] Serviço de LLM (Groq) implementado
+- [x] Retry com backoff exponencial implementado
+- [x] Templates de prompts criados
+- [x] Geração de insights implementada
+- [x] Cache de insights implementado
+- [x] Tratamento de erros robusto (fallback + retry)
 
 ### Backend - Endpoint de Recomendações
-- [ ] `GET /api/recommendations` implementado
-- [ ] `GET /api/recommendations/{id}/insight` implementado
-- [ ] Integração completa testada
-- [ ] Resposta no formato especificado
+- [x] `GET /api/recommendations` implementado
+- [x] `GET /api/recommendations/{id}/insight` implementado
+- [x] Integração completa testada
+- [x] Resposta no formato especificado
 
 ### Frontend
-- [ ] Estrutura HTML criada
-- [ ] Cliente HTTP para API implementado
-- [ ] Página de login funcionando
-- [ ] Dashboard de recomendações implementado
-- [ ] Exibição de insights funcionando
-- [ ] Estilização CSS aplicada
-- [ ] Responsividade básica implementada
-- [ ] Funcionalidades adicionais (histórico, logout)
+- [x] Estrutura HTML criada *(React + Vite + TypeScript)*
+- [x] Cliente HTTP para API implementado *(lib/api.ts)*
+- [x] Página de login funcionando
+- [x] Dashboard de recomendações implementado
+- [x] Exibição de insights funcionando
+- [x] Estilização CSS aplicada *(Tailwind CSS + Shadcn/UI)*
+- [x] Responsividade básica implementada
+- [x] Funcionalidades adicionais (histórico, logout) *(Logout implementado, histórico pendente)*
 
 ### Testes
-- [ ] Configuração de testes (pytest, fixtures)
-- [ ] Testes de autenticação
-- [ ] Testes de recomendações
-- [ ] Testes de integração
-- [ ] Validação manual completa
+- [ ] Configuração de testes (pytest, fixtures) *(Pendente - testes automatizados)*
+- [x] Testes de autenticação *(Scripts manuais implementados)*
+- [x] Testes de recomendações *(Scripts manuais implementados)*
+- [x] Testes de integração *(Validação manual realizada)*
+- [x] Validação manual completa
 
 ### Refinamento
-- [ ] Tratamento de erros robusto
-- [ ] Logging estruturado implementado
-- [ ] Performance otimizada (< 1s resposta)
-- [ ] UX melhorada (loading, feedback)
-- [ ] Documentação atualizada
+- [x] Tratamento de erros robusto
+- [ ] Logging estruturado implementado *(Pendente - logging básico existe)*
+- [ ] Performance otimizada (< 1s resposta) *(Pendente - métricas automatizadas)*
+- [x] UX melhorada (loading, feedback) *(Parcial - melhorias pendentes)*
+- [x] Documentação atualizada *(Básica - melhorias pendentes)*
 
 ### Deploy
 - [ ] Backend deployado (Fly.io)
 - [ ] Frontend deployado (Netlify)
-- [ ] CORS configurado corretamente
+- [ ] CORS configurado corretamente *(Pendente configuração de produção)*
 - [ ] Sistema funcionando em produção
-- [ ] Endpoint `/health` validado
+- [ ] Endpoint `/health` validado *(Pendente validação em produção)*
 
 ---
 
