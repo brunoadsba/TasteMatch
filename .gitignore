@@ -56,12 +56,11 @@ Thumbs.db
 .coverage
 htmlcov/
 
-# Models and embeddings cache
+# ML Models and embeddings cache (not Pydantic models in backend/app/models/)
 *.pkl
 *.h5
 *.pt
 *.pth
-models/
 embeddings_cache/
 
 # Frontend (se usar build tools)
