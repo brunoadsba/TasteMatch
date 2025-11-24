@@ -3,6 +3,7 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 pydantic==2.5.0
 pydantic-settings==2.1.0
+email-validator==2.3.0  # Necessário para EmailStr do Pydantic
 
 # Banco de Dados
 sqlalchemy==2.0.23
@@ -11,7 +12,7 @@ pgvector==0.2.4  # Para busca vetorial otimizada (PostgreSQL)
 
 # Autenticação
 python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4  # Hash de senhas com bcrypt (salt automático)
+bcrypt==4.1.2  # Hash de senhas com bcrypt (usado diretamente)
 python-multipart==0.0.6
 
 # IA e Machine Learning
@@ -32,6 +33,7 @@ groq==0.4.1
 # Utilitários
 python-dotenv==1.0.0
 httpx==0.25.1
+requests==2.31.0  # Para scripts de teste
 
 # Testes
 pytest==7.4.3
