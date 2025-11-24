@@ -8,8 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from app.config import settings
 
-# TODO: Importar routers quando criados
-# from app.api.routes import auth, recommendations, restaurants, orders, users
+# Importar routers
+from app.api.routes import auth, users, restaurants, orders, recommendations
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -24,7 +24,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # Frontend em desenvolvimento
-        "http://localhost:5173",  # Vite dev server
+        "http://localhost:5173",  # Vite dev server (porta padrão)
+        "http://localhost:5174",  # Vite dev server (porta alternativa)
+        "http://127.0.0.1:5173",  # Vite dev server (IP localhost)
+        "http://127.0.0.1:5174",  # Vite dev server (IP localhost, porta alternativa)
         # "https://tastematch.netlify.app",  # Frontend em produção (adicionar quando deployar)
     ],
     allow_credentials=True,
@@ -46,7 +49,11 @@ async def health_check():
     # Verificar conexão com banco de dados
     try:
         with engine.connect() as conn:
-            database_status = "connected"
+            # Verificar se há tabelas criadas
+            from sqlalchemy import inspect
+            inspector = inspect(engine)
+            tables = inspector.get_table_names()
+            database_status = f"connected ({len(tables)} tables)"
     except Exception as e:
         database_status = f"disconnected: {str(e)}"
     
@@ -71,12 +78,12 @@ async def root():
     }
 
 
-# TODO: Incluir routers quando criados
-# app.include_router(auth.router, prefix="/auth", tags=["authentication"])
-# app.include_router(recommendations.router, prefix="/api", tags=["recommendations"])
-# app.include_router(restaurants.router, prefix="/api", tags=["restaurants"])
-# app.include_router(orders.router, prefix="/api", tags=["orders"])
-# app.include_router(users.router, prefix="/api", tags=["users"])
+# Incluir routers
+app.include_router(auth.router)
+app.include_router(users.router)
+app.include_router(restaurants.router)
+app.include_router(orders.router)
+app.include_router(recommendations.router)
 
 
 if __name__ == "__main__":

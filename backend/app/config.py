@@ -3,9 +3,30 @@ Configurações da aplicação usando Pydantic Settings.
 Gerencia variáveis de ambiente e configurações.
 """
 
+import os
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import Optional
+
+
+def get_env_file_path() -> str:
+    """
+    Retorna o caminho do arquivo .env.
+    Procura primeiro na raiz do projeto, depois no diretório atual.
+    """
+    # Caminho do arquivo config.py
+    current_file = Path(__file__)
+    # Raiz do projeto (2 níveis acima: backend/app/config.py -> raiz)
+    project_root = current_file.parent.parent.parent
+    root_env = project_root / ".env"
+    
+    # Se existe .env na raiz, usar ele
+    if root_env.exists():
+        return str(root_env)
+    
+    # Caso contrário, procurar no diretório atual
+    return ".env"
 
 
 class Settings(BaseSettings):
@@ -47,7 +68,7 @@ class Settings(BaseSettings):
     )
     
     class Config:
-        env_file = ".env"
+        env_file = get_env_file_path()
         env_file_encoding = "utf-8"
         case_sensitive = True
 
