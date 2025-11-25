@@ -12,8 +12,10 @@ from app.core.security import (
     verify_password,
     create_access_token
 )
+from app.core.logging_config import get_logger
 from pydantic import BaseModel
 
+logger = get_logger(__name__)
 router = APIRouter(prefix="/auth", tags=["autenticação"])
 
 
@@ -50,6 +52,10 @@ def register(
     # Verificar se email já existe
     existing_user = get_user_by_email(db, email=user_data.email)
     if existing_user:
+        logger.warning(
+            "Tentativa de registro com email já cadastrado",
+            extra={"email": user_data.email}
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email já cadastrado"
@@ -67,6 +73,11 @@ def register(
         "email": db_user.email
     }
     token = create_access_token(data=token_data)
+    
+    logger.info(
+        "Usuário registrado com sucesso",
+        extra={"user_id": db_user.id, "email": db_user.email}
+    )
     
     return TokenResponse(
         user=UserResponse.model_validate(db_user),
@@ -95,6 +106,10 @@ def login(
     # Buscar usuário por email
     user = get_user_by_email(db, email=login_data.email)
     if not user:
+        logger.warning(
+            "Tentativa de login com email não cadastrado",
+            extra={"email": login_data.email}
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou senha incorretos",
@@ -103,6 +118,10 @@ def login(
     
     # Verificar senha
     if not verify_password(login_data.password, user.password_hash):
+        logger.warning(
+            "Tentativa de login com senha incorreta",
+            extra={"user_id": user.id, "email": user.email}
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou senha incorretos",
@@ -115,6 +134,11 @@ def login(
         "email": user.email
     }
     token = create_access_token(data=token_data)
+    
+    logger.info(
+        "Login realizado com sucesso",
+        extra={"user_id": user.id, "email": user.email}
+    )
     
     return TokenResponse(
         user=UserResponse.model_validate(user),

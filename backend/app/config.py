@@ -71,6 +71,23 @@ class Settings(BaseSettings):
         env_file = get_env_file_path()
         env_file_encoding = "utf-8"
         case_sensitive = True
+    
+    @property
+    def is_production(self) -> bool:
+        """Retorna True se estiver em ambiente de produção."""
+        return self.ENVIRONMENT.lower() == "production"
+    
+    def validate_production_settings(self):
+        """Valida configurações críticas para produção."""
+        if self.is_production:
+            if self.DEBUG:
+                raise ValueError("DEBUG deve ser False em produção!")
+            if self.SECRET_KEY == "change-this-secret-key-in-production-please":
+                raise ValueError("SECRET_KEY deve ser alterada em produção!")
+            if self.JWT_SECRET_KEY == "change-this-jwt-secret-key-in-production-please":
+                raise ValueError("JWT_SECRET_KEY deve ser alterada em produção!")
+            if "sqlite" in self.DATABASE_URL.lower():
+                raise ValueError("SQLite não deve ser usado em produção! Use PostgreSQL.")
 
 
 # Instância global de configurações

@@ -3,7 +3,7 @@ Modelos SQLAlchemy (ORM) para o TasteMatch.
 Define todas as tabelas do banco de dados.
 """
 
-from sqlalchemy import Column, Integer, String, Text, DECIMAL, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Text, DECIMAL, DateTime, ForeignKey, JSON, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database.base import Base
@@ -60,6 +60,7 @@ class Order(Base):
     total_amount = Column(DECIMAL(10, 2), nullable=True)
     items = Column(Text, nullable=True)  # JSON array de itens pedidos
     rating = Column(Integer, nullable=True)  # 1 a 5 (opcional)
+    is_simulation = Column(Boolean, default=False, nullable=False)  # Marca pedidos de demonstração
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relacionamentos

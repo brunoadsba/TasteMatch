@@ -9,9 +9,30 @@ from groq import Groq
 from groq import APIConnectionError, APIError, RateLimitError
 
 from app.config import settings
+from app.core.logging_config import get_logger
 from app.database.crud import get_recommendation
 from app.database.models import Restaurant
 # extract_user_patterns será usado apenas quando necessário (evitar import circular)
+
+logger = get_logger(__name__)
+
+
+def format_cuisine_type(cuisine_type: str) -> str:
+    """
+    Formata tipo de culinária para uso em texto, adicionando 'comida' quando apropriado.
+    
+    Args:
+        cuisine_type: Tipo de culinária (ex: "brasileira", "japonesa")
+        
+    Returns:
+        str: Tipo formatado (ex: "comida brasileira", "comida japonesa")
+    """
+    # Se já contém "comida", retornar como está
+    if "comida" in cuisine_type.lower():
+        return cuisine_type
+    
+    # Adicionar "comida" antes do tipo
+    return f"comida {cuisine_type}"
 
 
 # Cliente Groq global (singleton)
@@ -77,6 +98,7 @@ def build_insight_prompt(
     # Informações do restaurante
     restaurant_name = restaurant.name
     cuisine_type = restaurant.cuisine_type
+    cuisine_type_formatted = format_cuisine_type(cuisine_type)
     rating = float(restaurant.rating or 0)
     description = restaurant.description or "Sem descrição disponível"
     price_range = restaurant.price_range or "não especificado"
@@ -93,22 +115,31 @@ CONTEXTO DO USUÁRIO:
 
 RESTAURANTE RECOMENDADO:
 - Nome: {restaurant_name}
-- Tipo: {cuisine_type}
+- Tipo: {cuisine_type_formatted}
 - Avaliação: {rating}/5.0
 - Faixa de preço: {price_range}
 - Descrição: {description}
 - Score de similaridade: {similarity_score:.2f}
 
-INSTRUÇÕES:
-- Explique de forma natural e conversacional por que este restaurante foi recomendado
-- Mencione conexões com o histórico do usuário (ex: "você costuma pedir comida {cuisine_type}")
-- Destaque características relevantes (rating {rating}/5.0, tipo de culinária {cuisine_type})
-- Seja específico e personalizado
-- Mantenha o texto entre 2-3 frases
-- Use tom amigável e profissional
+INSTRUÇÕES IMPORTANTES:
+- NÃO mencione o nome do restaurante (já está visível no card)
+- NÃO mencione o nome do usuário no início (já está visível no contexto)
+- Explique APENAS o motivo da recomendação de forma direta e concisa
+- Mencione conexões com o histórico do usuário se relevante
+- Destaque 1-2 características principais (rating, tipo de culinária, ou qualidade)
+- Seja específico e pessoal, mas breve
+- Máximo de 2 frases curtas (50-80 palavras no total)
+- Use tom amigável e direto
 - Escreva em português do Brasil
+- Foque no "por quê" da recomendação, não em descrever o restaurante
+- Ao mencionar tipo de culinária, use "comida [tipo]" (ex: "comida brasileira", "comida japonesa")
 
-Gere o insight:"""
+Exemplos de BOA resposta:
+- "Alinhado com seu gosto por {cuisine_type_formatted}, com avaliação de {rating}/5.0."
+- "Excelente opção para quem busca alta qualidade, avaliado em {rating}/5.0."
+- "Recomendado baseado no seu histórico de preferência por restaurantes com alta avaliação."
+
+Gere o insight (máximo 80 palavras):"""
     
     return prompt
 
@@ -154,7 +185,7 @@ def generate_insight_with_retry(
                     }
                 ],
                 temperature=0.7,  # Balance entre criatividade e consistência
-                max_tokens=150,
+                max_tokens=80,  # Reduzido para textos mais concisos (evita cortes)
                 timeout=10.0  # Timeout de 10 segundos
             )
             
@@ -178,14 +209,19 @@ def generate_insight_with_retry(
                 delay *= backoff_factor
             else:
                 # Última tentativa falhou
-                if settings.DEBUG:
-                    print(f"⚠️  Erro ao gerar insight após {max_retries} tentativas: {str(e)}")
+                logger.error(
+                    f"Erro ao gerar insight após {max_retries} tentativas",
+                    extra={"error_type": type(e).__name__, "error": str(e), "attempt": attempt + 1}
+                )
                 return None
                 
         except Exception as e:
             # Outro erro inesperado
-            if settings.DEBUG:
-                print(f"⚠️  Erro inesperado ao gerar insight: {str(e)}")
+            logger.error(
+                "Erro inesperado ao gerar insight",
+                extra={"error_type": type(e).__name__, "error": str(e)},
+                exc_info=True
+            )
             return None
     
     return None
@@ -251,6 +287,10 @@ def generate_insight(
     if use_cache and db:
         cached_insight = get_cached_insight(user_id, restaurant.id, db, ttl_days)
         if cached_insight:
+            logger.debug(
+                "Insight encontrado em cache",
+                extra={"user_id": user_id, "restaurant_id": restaurant.id}
+            )
             return cached_insight
     
     # 2. Construir prompt
@@ -291,10 +331,10 @@ def generate_fallback_insight(restaurant: Restaurant) -> str:
         str: Insight genérico
     """
     rating = float(restaurant.rating or 0)
-    cuisine_type = restaurant.cuisine_type
+    cuisine_type_formatted = format_cuisine_type(restaurant.cuisine_type)
     
     return (
-        f"Recomendamos {restaurant.name}, um restaurante de {cuisine_type} "
+        f"Recomendamos {restaurant.name}, um restaurante de {cuisine_type_formatted} "
         f"com avaliação de {rating}/5.0 estrelas, baseado nas suas preferências."
     )
 

@@ -15,6 +15,7 @@ class OrderBase(BaseModel):
     total_amount: Optional[Decimal] = None
     items: Optional[List[Dict]] = None
     rating: Optional[int] = Field(ge=1, le=5, default=None)
+    is_simulation: Optional[bool] = False  # Marca pedidos de demonstração
 
 
 class OrderCreate(OrderBase):

@@ -66,6 +66,16 @@ USERS_DATA = [
 def seed_restaurants(db):
     """Cria restaurantes com embeddings."""
     print("🍽️  Criando restaurantes...")
+    print("   ⏳ Carregando modelo de embeddings (pode demorar na primeira vez)...")
+    
+    # Pré-carregar o modelo antes do loop para evitar múltiplos carregamentos
+    try:
+        from app.core.embeddings import get_embedding_model
+        model = get_embedding_model()
+        print("   ✅ Modelo de embeddings carregado!")
+    except Exception as e:
+        print(f"   ⚠️  Aviso ao carregar modelo: {e}")
+        model = None
     
     restaurants = []
     for i, rest_data in enumerate(RESTAURANTS_DATA, 1):
@@ -73,15 +83,19 @@ def seed_restaurants(db):
         
         # Gerar embedding para o restaurante
         try:
+            print(f"   🔄 [{i}/{len(RESTAURANTS_DATA)}] Gerando embedding para {restaurant.name}...", end=" ", flush=True)
             embedding = generate_restaurant_embedding(restaurant)
             embedding_json = json.dumps(embedding.tolist() if hasattr(embedding, 'tolist') else embedding)
+            print("✅")
         except Exception as e:
-            print(f"⚠️  Erro ao gerar embedding para {restaurant.name}: {e}")
+            print(f"⚠️  Erro: {e}")
             embedding_json = None
         
-        db_restaurant = create_restaurant(db, restaurant, embedding=embedding_json)
-        restaurants.append(db_restaurant)
-        print(f"   ✅ {i}/{len(RESTAURANTS_DATA)} - {db_restaurant.name}")
+        try:
+            db_restaurant = create_restaurant(db, restaurant, embedding=embedding_json)
+            restaurants.append(db_restaurant)
+        except Exception as e:
+            print(f"   ❌ Erro ao criar restaurante {restaurant.name}: {e}")
     
     print(f"\n✅ {len(restaurants)} restaurantes criados com embeddings!\n")
     return restaurants
@@ -156,27 +170,45 @@ def seed_orders(db, users, restaurants):
 
 def main():
     """Função principal de seeding."""
+    import time
+    start_time = time.time()
+    
     print("🌱 Iniciando seeding do banco de dados...\n")
     
     db = SessionLocal()
     
     try:
         # 1. Criar restaurantes com embeddings
+        print("=" * 50)
+        print("ETAPA 1/3: Restaurantes")
+        print("=" * 50)
         restaurants = seed_restaurants(db)
         
         # 2. Criar usuários
+        print("=" * 50)
+        print("ETAPA 2/3: Usuários")
+        print("=" * 50)
         users = seed_users(db)
         
         # 3. Criar pedidos
+        print("=" * 50)
+        print("ETAPA 3/3: Pedidos")
+        print("=" * 50)
         orders = seed_orders(db, users, restaurants)
         
+        elapsed_time = time.time() - start_time
         print("=" * 50)
         print("✅ Seeding concluído com sucesso!")
         print(f"   - {len(restaurants)} restaurantes")
         print(f"   - {len(users)} usuários")
         print(f"   - {len(orders)} pedidos")
+        print(f"   - Tempo total: {elapsed_time:.2f} segundos")
         print("=" * 50)
         
+    except KeyboardInterrupt:
+        print("\n\n⚠️  Seeding interrompido pelo usuário (Ctrl+C)")
+        db.rollback()
+        return False
     except Exception as e:
         print(f"\n❌ Erro durante seeding: {str(e)}")
         import traceback

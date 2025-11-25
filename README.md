@@ -23,14 +23,14 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 
 ### Status do Projeto
 
-**Progresso:** ~85% do MVP completo
+**Progresso:** ~95% do MVP completo
 
 - ✅ **Backend:** 100% completo (FastAPI, autenticação, CRUD, recomendações, GenAI)
 - ✅ **IA/ML:** 100% completo (embeddings, algoritmo de recomendação)
 - ✅ **GenAI:** 100% completo (Groq API com retry robusto)
-- ✅ **Frontend:** 90% completo (React + Vite + TypeScript + Shadcn/UI)
+- ✅ **Frontend:** 100% completo (React + Vite + TypeScript + Shadcn/UI)
+- ✅ **Deploy:** 100% completo (Backend no Fly.io, Frontend no Netlify)
 - ⏳ **Testes:** 20% (testes manuais completos, automatizados pendentes)
-- ⏳ **Deploy:** 0% (pendente)
 
 ### Tecnologias Principais
 
@@ -174,8 +174,10 @@ Após executar o seed, você pode usar estas credenciais:
 ### Documentos Principais
 
 - **[SPEC.md](./SPEC.md)** - Especificação técnica completa
+- **[RESUMO_DEPLOY_FINAL.md](./RESUMO_DEPLOY_FINAL.md)** - Resumo do deploy em produção
+- **[DEPLOY.md](./DEPLOY.md)** - Guia completo de deploy
+- **[VALIDACAO_PRODUCAO.md](./VALIDACAO_PRODUCAO.md)** - Validação de endpoints em produção
 - **[plano-de-acao.md](./plano-de-acao.md)** - Plano de desenvolvimento detalhado
-- **[STATUS_PROJETO.md](./STATUS_PROJETO.md)** - Status atual do projeto
 
 ### Endpoints Principais da API
 
@@ -387,10 +389,39 @@ pytest tests/  # Quando implementado
 
 ---
 
-## 📦 Deploy (Pendente)
+## 📦 Deploy em Produção ✅
 
-### Backend (Fly.io - Planejado)
+### 🌐 Acessar Aplicação
 
+**Frontend:** https://tastematch.netlify.app  
+**Backend API:** https://tastematch-api.fly.dev  
+**Documentação API:** https://tastematch-api.fly.dev/docs
+
+### Plataformas Utilizadas
+
+- **Backend:** Fly.io (São Paulo, Brasil)
+- **Frontend:** Netlify
+- **Banco de Dados:** PostgreSQL (Fly.io)
+
+### Status do Deploy
+
+✅ **Deploy completo e funcionando!**
+
+- ✅ Backend deployado e validado
+- ✅ Frontend deployado e validado
+- ✅ Integração end-to-end funcionando
+- ✅ Autenticação funcionando
+- ✅ CORS configurado
+- ✅ Variáveis de ambiente configuradas
+
+**Para detalhes completos do deploy, consulte:**
+- [RESUMO_DEPLOY_FINAL.md](./RESUMO_DEPLOY_FINAL.md) - Resumo completo do deploy
+- [DEPLOY.md](./DEPLOY.md) - Guia completo de deploy
+- [VALIDACAO_PRODUCAO.md](./VALIDACAO_PRODUCAO.md) - Validação de endpoints em produção
+
+### Como Fazer Deploy (Para Referência)
+
+**Backend (Fly.io):**
 ```bash
 cd backend
 fly launch
@@ -399,15 +430,12 @@ fly secrets set DATABASE_URL=postgresql://...
 fly deploy
 ```
 
-### Frontend (Netlify/Vercel - Planejado)
-
+**Frontend (Netlify):**
 ```bash
 cd frontend
 npm run build
-# Deploy via Netlify CLI ou interface web
+netlify deploy --prod
 ```
-
-**Nota:** Configure CORS no backend para permitir requisições do frontend em produção.
 
 ---
 
@@ -461,8 +489,8 @@ Este é um projeto de demonstração técnica. Para desenvolvimento:
 **Próximas versões planejadas:**
 - Melhorias de UX no frontend
 - Testes automatizados
-- Deploy em produção
-- Features adicionais (histórico, favoritos)
+- Popular banco com dados reais
+- Features adicionais (histórico completo, favoritos)
 
 ---
 
@@ -484,4 +512,6 @@ Projeto de demonstração técnica - Uso educacional.
 **Desenvolvido com ❤️ para demonstrar capacidade técnica em IA e desenvolvimento de sistemas.**
 
 **Última atualização:** 24/11/2025  
-**Status:** ✅ MVP Funcional - Pronto para uso e testes
+**Status:** ✅ MVP Funcional - **DEPLOYADO EM PRODUÇÃO**
+
+🌐 **Acesse agora:** https://tastematch.netlify.app

@@ -89,8 +89,9 @@ export function Login() {
               />
             </div>
             {error && (
-              <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
-                {error}
+              <div className="text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded flex items-start gap-2">
+                <span className="text-red-600">⚠️</span>
+                <span>{error}</span>
               </div>
             )}
             <Button type="submit" className="w-full" disabled={loading}>

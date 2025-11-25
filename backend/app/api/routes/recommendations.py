@@ -8,6 +8,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel
 import json
+import time
 
 from app.database.base import get_db
 from app.api.deps import get_current_user
@@ -29,6 +30,9 @@ from app.core.recommender import (
 from app.core.llm_service import (
     generate_insight
 )
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/recommendations", tags=["recomendações"])
 
@@ -60,6 +64,13 @@ def get_recommendations(
         RecommendationsListResponse: Lista de recomendações com insights
     """
     try:
+        start_time = time.time()
+        
+        logger.info(
+            "Gerando recomendações",
+            extra={"user_id": current_user.id, "limit": limit, "refresh": refresh}
+        )
+        
         # 1. Gerar recomendações usando a lógica de recomendação
         recs_list = generate_recs(
             user_id=current_user.id,
@@ -130,8 +141,10 @@ def get_recommendations(
                 
                 if not insight:
                     # Fallback: insight genérico
+                    from app.core.llm_service import format_cuisine_type
+                    cuisine_type_formatted = format_cuisine_type(restaurant.cuisine_type)
                     insight = (
-                        f"Recomendamos {restaurant.name}, um restaurante de {restaurant.cuisine_type} "
+                        f"Recomendamos {restaurant.name}, um restaurante de {cuisine_type_formatted} "
                         f"com avaliação de {restaurant.rating}/5.0, baseado nas suas preferências."
                     )
             
@@ -156,6 +169,17 @@ def get_recommendations(
                 generated_at=generated_at
             ))
         
+        duration_ms = (time.time() - start_time) * 1000
+        
+        logger.info(
+            "Recomendações geradas com sucesso",
+            extra={
+                "user_id": current_user.id,
+                "count": len(recommendations_response),
+                "duration_ms": round(duration_ms, 2)
+            }
+        )
+        
         return RecommendationsListResponse(
             recommendations=recommendations_response,
             count=len(recommendations_response),
@@ -163,9 +187,11 @@ def get_recommendations(
         )
         
     except Exception as e:
-        # Log do erro (em produção, usar logger adequado)
-        import traceback
-        traceback.print_exc()
+        logger.error(
+            "Erro ao gerar recomendações",
+            extra={"user_id": current_user.id, "error_type": type(e).__name__, "error": str(e)},
+            exc_info=True
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro ao gerar recomendações: {str(e)}"
@@ -242,8 +268,10 @@ def get_restaurant_insight(
         )
     except Exception as e:
         # Fallback: insight genérico
+        from app.core.llm_service import format_cuisine_type
+        cuisine_type_formatted = format_cuisine_type(restaurant.cuisine_type)
         insight = (
-            f"Recomendamos {restaurant.name}, um restaurante de {restaurant.cuisine_type} "
+            f"Recomendamos {restaurant.name}, um restaurante de {cuisine_type_formatted} "
             f"com avaliação de {restaurant.rating}/5.0, baseado nas suas preferências."
         )
     

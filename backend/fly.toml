@@ -1,0 +1,49 @@
+# fly.toml app configuration file generated for tastematch-api on 2025-11-24T17:05:41-03:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'tastematch-api'
+primary_region = 'gru'
+
+[build]
+  dockerfile = "Dockerfile"
+
+[deploy]
+  strategy = 'rolling'
+
+[env]
+  PORT = '8000'
+  PYTHON_VERSION = '3.11'
+
+[[services]]
+  protocol = 'tcp'
+  internal_port = 8000
+
+  [[services.ports]]
+    port = 80
+    handlers = ['http']
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ['tls', 'http']
+
+  [services.concurrency]
+    type = 'requests'
+    hard_limit = 1000
+    soft_limit = 500
+
+  [[services.http_checks]]
+    interval = '10s'
+    timeout = '2s'
+    grace_period = '5s'
+    method = 'GET'
+    path = '/health'
+    protocol = 'http'
+    tls_skip_verify = false
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1

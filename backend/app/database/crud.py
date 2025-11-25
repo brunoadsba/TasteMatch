@@ -2,7 +2,7 @@
 Operações CRUD (Create, Read, Update, Delete) para o TasteMatch.
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import select
 from typing import Optional, List
 from app.database.models import User, Restaurant, Order, Recommendation, UserPreferences
@@ -49,16 +49,44 @@ def get_restaurants(
     skip: int = 0,
     limit: int = 100,
     cuisine_type: Optional[str] = None,
-    min_rating: Optional[float] = None
+    min_rating: Optional[float] = None,
+    price_range: Optional[str] = None,
+    search: Optional[str] = None,
+    sort_by: Optional[str] = None
 ) -> List[Restaurant]:
-    """Lista restaurantes com filtros opcionais."""
+    """Lista restaurantes com filtros opcionais e ordenação."""
     stmt = select(Restaurant)
     
+    # Filtros
     if cuisine_type:
         stmt = stmt.where(Restaurant.cuisine_type == cuisine_type)
     
     if min_rating is not None:
         stmt = stmt.where(Restaurant.rating >= min_rating)
+    
+    if price_range:
+        stmt = stmt.where(Restaurant.price_range == price_range)
+    
+    if search:
+        # Busca textual no nome e descrição (case-insensitive)
+        search_pattern = f"%{search}%"
+        stmt = stmt.where(
+            (Restaurant.name.ilike(search_pattern)) |
+            (Restaurant.description.ilike(search_pattern))
+        )
+    
+    # Ordenação
+    if sort_by == "rating_desc":
+        stmt = stmt.order_by(Restaurant.rating.desc(), Restaurant.name.asc())
+    elif sort_by == "rating_asc":
+        stmt = stmt.order_by(Restaurant.rating.asc(), Restaurant.name.asc())
+    elif sort_by == "name_asc":
+        stmt = stmt.order_by(Restaurant.name.asc())
+    elif sort_by == "name_desc":
+        stmt = stmt.order_by(Restaurant.name.desc())
+    else:
+        # Default: ordenar por rating desc (maior primeiro)
+        stmt = stmt.order_by(Restaurant.rating.desc(), Restaurant.name.asc())
     
     stmt = stmt.offset(skip).limit(limit)
     result = db.execute(stmt)
@@ -82,6 +110,16 @@ def create_restaurant(db: Session, restaurant: RestaurantCreate, embedding: Opti
     return db_restaurant
 
 
+def update_restaurant_embedding(db: Session, restaurant_id: int, embedding: str) -> Optional[Restaurant]:
+    """Atualiza o embedding de um restaurante."""
+    db_restaurant = db.get(Restaurant, restaurant_id)
+    if db_restaurant:
+        db_restaurant.embedding = embedding
+        db.commit()
+        db.refresh(db_restaurant)
+    return db_restaurant
+
+
 # ==================== ORDERS ====================
 
 def get_order(db: Session, order_id: int) -> Optional[Order]:
@@ -95,11 +133,17 @@ def get_user_orders(
     skip: int = 0,
     limit: int = 100
 ) -> List[Order]:
-    """Lista pedidos de um usuário."""
-    stmt = select(Order).where(Order.user_id == user_id).order_by(Order.order_date.desc())
-    stmt = stmt.offset(skip).limit(limit)
+    """Lista pedidos de um usuário com eager loading do restaurante."""
+    stmt = (
+        select(Order)
+        .where(Order.user_id == user_id)
+        .order_by(Order.order_date.desc())
+        .options(joinedload(Order.restaurant))
+        .offset(skip)
+        .limit(limit)
+    )
     result = db.execute(stmt)
-    return list(result.scalars().all())
+    return list(result.scalars().unique().all())
 
 
 def create_order(db: Session, order: OrderCreate, user_id: int) -> Order:
@@ -112,7 +156,8 @@ def create_order(db: Session, order: OrderCreate, user_id: int) -> Order:
         order_date=order.order_date,
         total_amount=order.total_amount,
         items=json.dumps(order.items) if order.items else None,
-        rating=order.rating
+        rating=order.rating,
+        is_simulation=order.is_simulation if hasattr(order, 'is_simulation') and order.is_simulation else False
     )
     db.add(db_order)
     db.commit()

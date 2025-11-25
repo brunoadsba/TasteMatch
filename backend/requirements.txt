@@ -1,0 +1,41 @@
+# Core Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+email-validator==2.3.0  # Necessário para EmailStr do Pydantic
+
+# Banco de Dados
+sqlalchemy==2.0.23
+alembic==1.12.1
+psycopg2-binary==2.9.9  # Driver PostgreSQL para SQLAlchemy
+pgvector==0.2.4  # Para busca vetorial otimizada (PostgreSQL)
+
+# Autenticação
+python-jose[cryptography]==3.3.0
+bcrypt==4.1.2  # Hash de senhas com bcrypt (usado diretamente)
+python-multipart==0.0.6
+
+# IA e Machine Learning
+# sentence-transformers requer PyTorch e transformers como dependências
+sentence-transformers==2.3.1  # Versão estável e compatível
+torch==2.1.2  # PyTorch - será instalado automaticamente, mas fixamos versão
+transformers==4.35.2  # Necessário para sentence-transformers
+huggingface-hub==0.20.0  # Compatível com sentence-transformers 2.3.1
+
+# Numéricas e Análise
+numpy==1.26.2  # Compatível com torch e scikit-learn
+pandas==2.1.4
+scikit-learn==1.3.2
+
+# LLM (GenAI)
+groq==0.4.1
+
+# Utilitários
+python-dotenv==1.0.0
+httpx==0.25.1
+requests==2.31.0  # Para scripts de teste
+
+# Testes
+pytest==7.4.3
+pytest-asyncio==0.21.1

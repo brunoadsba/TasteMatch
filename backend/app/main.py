@@ -3,10 +3,26 @@ TasteMatch - Agente de Recomendação Inteligente
 Main application entry point.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
+import time
+import os
 from app.config import settings
+from app.core.logging_config import setup_logging, get_logger
+
+# Configurar logging primeiro
+setup_logging()
+logger = get_logger(__name__)
+
+# Validar configurações de produção ao iniciar
+if settings.is_production:
+    try:
+        settings.validate_production_settings()
+        logger.info("Configurações de produção validadas com sucesso")
+    except ValueError as e:
+        logger.error(f"Erro na validação de configurações de produção: {e}")
+        raise
 
 # Importar routers
 from app.api.routes import auth, users, restaurants, orders, recommendations
@@ -19,17 +35,54 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+# Middleware para logging de requisições
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Middleware para logar todas as requisições HTTP."""
+    start_time = time.time()
+    
+    # Executar requisição
+    response = await call_next(request)
+    
+    # Calcular duração
+    duration_ms = (time.time() - start_time) * 1000
+    
+    # Log da requisição
+    extra = {
+        "endpoint": str(request.url.path),
+        "method": request.method,
+        "status_code": response.status_code,
+        "duration_ms": round(duration_ms, 2),
+    }
+    
+    logger.info(
+        f"{request.method} {request.url.path} - {response.status_code}",
+        extra=extra
+    )
+    
+    return response
+
+logger.info("Aplicação FastAPI inicializada", extra={"app_name": settings.APP_NAME, "environment": settings.ENVIRONMENT})
+
 # Configuração CORS
+# Configurar CORS baseado no ambiente
+cors_origins = [
+    "http://localhost:3000",  # Frontend em desenvolvimento
+    "http://localhost:5173",  # Vite dev server (porta padrão)
+    "http://localhost:5174",  # Vite dev server (porta alternativa)
+    "http://127.0.0.1:5173",  # Vite dev server (IP localhost)
+    "http://127.0.0.1:5174",  # Vite dev server (IP localhost, porta alternativa)
+    "https://tastematch.netlify.app",  # Frontend em produção (Netlify)
+]
+
+# Adicionar origem de produção se configurada via variável de ambiente
+frontend_url = os.getenv("FRONTEND_URL")
+if frontend_url and frontend_url not in cors_origins:
+    cors_origins.append(frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # Frontend em desenvolvimento
-        "http://localhost:5173",  # Vite dev server (porta padrão)
-        "http://localhost:5174",  # Vite dev server (porta alternativa)
-        "http://127.0.0.1:5173",  # Vite dev server (IP localhost)
-        "http://127.0.0.1:5174",  # Vite dev server (IP localhost, porta alternativa)
-        # "https://tastematch.netlify.app",  # Frontend em produção (adicionar quando deployar)
-    ],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

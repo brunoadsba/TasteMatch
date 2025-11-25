@@ -74,3 +74,6 @@ out/
 temp/
 tmp/
 
+
+# Local Netlify folder
+.netlify

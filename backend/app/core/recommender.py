@@ -19,6 +19,9 @@ from app.database.crud import (
 )
 from app.database.models import Restaurant, Order
 from app.core.embeddings import get_embedding_model
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def calculate_weight(order_date: datetime, rating: Optional[int]) -> float:

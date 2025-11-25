@@ -57,11 +57,11 @@ def list_user_orders(
     total = db.execute(count_stmt).scalar() or 0
     
     # Buscar informações dos restaurantes para incluir nome
-    restaurant_ids = list(set(order.restaurant_id for order in orders))
+    # Usando eager loading já otimizado no crud.py (get_user_orders)
     restaurants = {}
-    if restaurant_ids:
-        stmt = select(Restaurant).where(Restaurant.id.in_(restaurant_ids))
-        restaurants = {r.id: r for r in db.execute(stmt).scalars().all()}
+    for order in orders:
+        if order.restaurant:
+            restaurants[order.restaurant_id] = order.restaurant
     
     # Formatar pedidos com nome do restaurante
     orders_data = []
@@ -121,5 +121,55 @@ def create_new_order(
         user_id=current_user.id
     )
     
-    return OrderResponse.model_validate(db_order)
+    # Converter items de JSON string para lista se necessário
+    order_dict = {
+        "id": db_order.id,
+        "user_id": db_order.user_id,
+        "restaurant_id": db_order.restaurant_id,
+        "order_date": db_order.order_date,
+        "total_amount": db_order.total_amount,
+        "items": json.loads(db_order.items) if db_order.items else None,
+        "rating": db_order.rating,
+        "created_at": db_order.created_at
+    }
+    
+    return OrderResponse.model_validate(order_dict)
+
+
+@router.delete("/simulation", status_code=status.HTTP_200_OK)
+def reset_simulation(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Remove todos os pedidos simulados do usuário autenticado.
+    
+    Args:
+        current_user: Usuário autenticado
+        db: Sessão do banco de dados
+        
+    Returns:
+        dict: Número de pedidos deletados
+    """
+    # Contar pedidos antes de deletar
+    count_stmt = select(func.count(Order.id)).where(
+        Order.user_id == current_user.id,
+        Order.is_simulation == True
+    )
+    total_before = db.execute(count_stmt).scalar() or 0
+    
+    # Deletar apenas pedidos simulados do usuário autenticado
+    delete_stmt = select(Order).where(
+        Order.user_id == current_user.id,
+        Order.is_simulation == True
+    )
+    orders_to_delete = db.execute(delete_stmt).scalars().all()
+    
+    for order in orders_to_delete:
+        db.delete(order)
+    
+    db.commit()
+    deleted_count = total_before
+    
+    return {"deleted": deleted_count, "message": f"{deleted_count} pedido(s) simulado(s) removido(s)"}
 

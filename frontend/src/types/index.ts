@@ -39,10 +39,12 @@ export interface Order {
   id: number;
   user_id: number;
   restaurant_id: number;
+  restaurant_name?: string;
   order_date: string;
   total_amount?: number;
   items?: Array<Record<string, any>>;
   rating?: number;
+  is_simulation?: boolean;
   created_at: string;
 }
 
@@ -52,6 +54,7 @@ export interface OrderCreate {
   total_amount?: number;
   items?: Array<Record<string, any>>;
   rating?: number;
+  is_simulation?: boolean;
 }
 
 export interface Recommendation {

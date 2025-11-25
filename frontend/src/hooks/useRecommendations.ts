@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import type { Recommendation } from '@/types';
 
@@ -20,10 +21,25 @@ export function useRecommendations(limit: number = 10): UseRecommendationsReturn
       setError(null);
       const data = await api.getRecommendations({ limit, refresh: refreshCache });
       // Garantir que sempre seja um array
-      setRecommendations(Array.isArray(data) ? data : []);
+      const recommendationsArray = Array.isArray(data) ? data : [];
+      setRecommendations(recommendationsArray);
+      
+      if (refreshCache && recommendationsArray.length > 0) {
+        toast.success('Recomendações atualizadas!', {
+          description: `${recommendationsArray.length} restaurantes encontrados.`,
+        });
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar recomendações');
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar recomendações';
+      setError(errorMessage);
       setRecommendations([]);
+      
+      // Não mostrar toast de erro no carregamento inicial
+      if (refreshCache) {
+        toast.error('Falha ao atualizar recomendações', {
+          description: 'Tente novamente em alguns instantes.',
+        });
+      }
     } finally {
       setLoading(false);
     }

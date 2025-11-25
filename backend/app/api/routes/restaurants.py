@@ -31,6 +31,9 @@ def list_restaurants(
     limit: int = Query(20, ge=1, le=100, description="Itens por página"),
     cuisine_type: Optional[str] = Query(None, description="Filtrar por tipo de culinária"),
     min_rating: Optional[float] = Query(None, ge=0.0, le=5.0, description="Rating mínimo"),
+    price_range: Optional[str] = Query(None, description="Filtrar por faixa de preço (low, medium, high)"),
+    search: Optional[str] = Query(None, description="Busca textual no nome e descrição"),
+    sort_by: Optional[str] = Query(None, description="Ordenação (rating_desc, rating_asc, name_asc, name_desc)"),
     db: Session = Depends(get_db)
 ):
     """
@@ -41,6 +44,9 @@ def list_restaurants(
         limit: Itens por página (máximo 100)
         cuisine_type: Filtrar por tipo de culinária
         min_rating: Rating mínimo (0.0 a 5.0)
+        price_range: Filtrar por faixa de preço (low, medium, high)
+        search: Busca textual no nome e descrição
+        sort_by: Ordenação (rating_desc, rating_asc, name_asc, name_desc)
         db: Sessão do banco de dados
         
     Returns:
@@ -55,7 +61,10 @@ def list_restaurants(
         skip=skip,
         limit=limit,
         cuisine_type=cuisine_type,
-        min_rating=min_rating
+        min_rating=min_rating,
+        price_range=price_range,
+        search=search,
+        sort_by=sort_by
     )
     
     # Contar total de restaurantes (com filtros aplicados)
@@ -66,6 +75,14 @@ def list_restaurants(
         count_stmt = count_stmt.where(Restaurant.cuisine_type == cuisine_type)
     if min_rating is not None:
         count_stmt = count_stmt.where(Restaurant.rating >= min_rating)
+    if price_range:
+        count_stmt = count_stmt.where(Restaurant.price_range == price_range)
+    if search:
+        search_pattern = f"%{search}%"
+        count_stmt = count_stmt.where(
+            (Restaurant.name.ilike(search_pattern)) |
+            (Restaurant.description.ilike(search_pattern))
+        )
     
     total = db.execute(count_stmt).scalar() or 0
     

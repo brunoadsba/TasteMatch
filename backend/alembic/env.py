@@ -28,8 +28,14 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# Normalizar DATABASE_URL: converter postgres:// para postgresql://
+# SQLAlchemy 2.0 requer postgresql:// (não postgres://)
+database_url = settings.DATABASE_URL
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
 # Override sqlalchemy.url with settings from environment
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+config.set_main_option("sqlalchemy.url", database_url)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
@@ -54,6 +60,9 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
+    # Normalizar URL novamente para garantir
+    if url and url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
     context.configure(
         url=url,
         target_metadata=target_metadata,
