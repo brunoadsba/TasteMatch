@@ -31,19 +31,19 @@ export const FIT_SCENARIO: SimulationScenario = {
   color: 'green',
   orders: [
     {
-      cuisine_type: 'Salada',
+      cuisine_type: 'vegetariana', // Tipo de restaurante que serve saladas
       total_amount: 35.90,
       rating: 5,
       items: ['Salada Caesar', 'Suco Verde']
     },
     {
-      cuisine_type: 'Japonês',
+      cuisine_type: 'japonesa', // Tipo de restaurante que serve poke bowls
       total_amount: 42.50,
       rating: 4,
       items: ['Poke Bowl Salmão', 'Chá Verde']
     },
     {
-      cuisine_type: 'Saudável',
+      cuisine_type: 'vegetariana', // Tipo de restaurante que serve opções saudáveis
       total_amount: 28.90,
       rating: 5,
       items: ['Smoothie Bowl', 'Granola']
@@ -63,19 +63,19 @@ export const COMFORT_SCENARIO: SimulationScenario = {
   color: 'orange',
   orders: [
     {
-      cuisine_type: 'Pizza',
+      cuisine_type: 'italiana', // Tipo de restaurante que serve pizza
       total_amount: 58.90,
       rating: 5,
       items: ['Pizza Grande Calabresa', 'Coca-Cola 2L']
     },
     {
-      cuisine_type: 'Hamburgueria',
+      cuisine_type: 'hamburgueria', // Tipo de restaurante válido no banco
       total_amount: 45.90,
       rating: 4,
       items: ['X-Burger Completo', 'Batata Frita', 'Refrigerante']
     },
     {
-      cuisine_type: 'Lanches',
+      cuisine_type: 'sanduíches', // Tipo de restaurante válido no banco
       total_amount: 32.90,
       rating: 5,
       items: ['Porção de Nuggets', 'Açaí com Leite Condensado']
@@ -95,19 +95,19 @@ export const PREMIUM_SCENARIO: SimulationScenario = {
   color: 'purple',
   orders: [
     {
-      cuisine_type: 'Francesa',
+      cuisine_type: 'italiana', // Usando italiana para alta gastronomia (Francesa não está no banco)
       total_amount: 125.00,
       rating: 5,
       items: ['Coq au Vin', 'Vinho Tinto', 'Crème Brûlée']
     },
     {
-      cuisine_type: 'Japonês',
+      cuisine_type: 'japonesa', // Tipo de restaurante válido no banco
       total_amount: 98.90,
       rating: 5,
       items: ['Sashimi Premium', 'Temaki Especial', 'Sake']
     },
     {
-      cuisine_type: 'Italiana',
+      cuisine_type: 'italiana', // Tipo de restaurante válido no banco
       total_amount: 89.90,
       rating: 4,
       items: ['Risotto de Camarão', 'Tiramisù', 'Vinho Branco']

@@ -14,7 +14,7 @@ interface UseOrdersReturn {
   loading: boolean;
   error: string | null;
   fetchOrders: (offset?: number) => Promise<void>;
-  refresh: () => Promise<void>;
+  refresh: (showToast?: boolean) => Promise<void>;
 }
 
 export function useOrders(options: UseOrdersOptions = {}): UseOrdersReturn {
@@ -42,9 +42,11 @@ export function useOrders(options: UseOrdersOptions = {}): UseOrdersReturn {
     }
   };
 
-  const refresh = async () => {
+  const refresh = async (showToast: boolean = false) => {
     await fetchOrders(0);
-    toast.success('Histórico atualizado');
+    if (showToast) {
+      toast.success('Histórico atualizado');
+    }
   };
 
   useEffect(() => {

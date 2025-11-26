@@ -4,13 +4,14 @@ import { RestaurantCard } from '@/components/features/RestaurantCard';
 import { RecommendationSkeletonGrid } from '@/components/features/RecommendationSkeleton';
 import { OrderSimulator } from '@/components/features/OrderSimulator';
 import { LLMInsightPanel } from '@/components/features/LLMInsightPanel';
-import { AIReasoningLogComponent } from '@/components/features/AIReasoningLog';
-import { useAIReasoning } from '@/hooks/useAIReasoning';
+import { ChefRecommendationCard } from '@/components/features/ChefRecommendationCard';
+import { ChefReasoningModal } from '@/components/features/ChefReasoningModal';
 import { useResetSimulation } from '@/hooks/useResetSimulation';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, LogOut, User, AlertCircle, History, Play, X, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export function Dashboard() {
   const { user, logout } = useAuth();
@@ -18,17 +19,32 @@ export function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [simulatorOpen, setSimulatorOpen] = useState(false);
-  const { logs, clearLogs } = useAIReasoning();
+  const [ordersRefreshTrigger, setOrdersRefreshTrigger] = useState(0); // Trigger para atualizar pedidos
+  const [reasoningModalOpen, setReasoningModalOpen] = useState(false); // Modal de raciocínio
   const { resetSimulation, loading: resetting } = useResetSimulation();
 
   const handleResetSimulation = async () => {
     if (confirm('Deseja resetar toda a simulação? Isso removerá todos os pedidos simulados.')) {
-      clearLogs();
       const success = await resetSimulation();
       if (success) {
         await refresh();
+        // Atualizar trigger para atualizar o painel de pedidos
+        setOrdersRefreshTrigger(prev => prev + 1);
       }
     }
+  };
+
+  // Função para scroll até o grid de recomendações
+  const handleScrollToRecommendations = () => {
+    const recommendationsSection = document.querySelector('[data-recommendations-section]');
+    if (recommendationsSection) {
+      recommendationsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Callback para atualizar pedidos quando um novo pedido é criado
+  const handleOrderCreated = () => {
+    setOrdersRefreshTrigger(prev => prev + 1);
   };
 
   const handleRefresh = async () => {
@@ -43,9 +59,9 @@ export function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="bg-white border-b">
+      <header className="bg-card border-b border-border">
         {/* Barra de Demo Mode */}
         {isDemoMode && (
           <div className="bg-blue-600 text-white px-4 py-2 text-center text-sm font-medium">
@@ -59,6 +75,9 @@ export function Dashboard() {
               <p className="text-sm text-gray-500">Recomendações personalizadas para você</p>
             </div>
             <div className="flex items-center gap-4">
+              {/* Toggle Tema Claro/Escuro */}
+              <ThemeToggle />
+
               {/* Toggle Modo Demo */}
               <Button
                 variant={isDemoMode ? "default" : "outline"}
@@ -116,16 +135,22 @@ export function Dashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Layout para Modo Demo: Sidebar com Terminal */}
+        {/* Layout para Modo Demo: Layout Vertical com Chef em Destaque */}
         {isDemoMode && (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-            {/* Painel LLM Insight */}
-            <div className="lg:col-span-3">
-              <LLMInsightPanel />
+          <div className="space-y-6 mb-6">
+            {/* Chef Recomenda em destaque (Hero) */}
+            <div className="max-w-4xl mx-auto w-full">
+              <ChefRecommendationCard
+                refreshTrigger={ordersRefreshTrigger}
+                onViewReasoning={() => setReasoningModalOpen(true)}
+                onScrollToRecommendations={handleScrollToRecommendations}
+                className="w-full"
+              />
             </div>
-            {/* Terminal de AI Reasoning */}
-            <div className="lg:col-span-1">
-              <AIReasoningLogComponent logs={logs} onClear={clearLogs} />
+
+            {/* Análise de Perfil abaixo como contexto */}
+            <div className="max-w-4xl mx-auto w-full">
+              <LLMInsightPanel refreshTrigger={ordersRefreshTrigger} />
             </div>
           </div>
         )}
@@ -133,12 +158,12 @@ export function Dashboard() {
         {/* Painel LLM Insight (fora do modo demo - oculto ou menor) */}
         {!isDemoMode && (
           <div className="mb-6">
-            <LLMInsightPanel />
+            <LLMInsightPanel refreshTrigger={ordersRefreshTrigger} />
           </div>
         )}
 
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-semibold text-gray-900">
+          <h2 className="text-2xl font-semibold">
             Restaurantes Recomendados
           </h2>
           <div className="flex items-center gap-3">
@@ -208,8 +233,19 @@ export function Dashboard() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recommendations.map((rec) => (
+          <div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            data-recommendations-section
+          >
+            {/* Filtrar duplicatas no frontend: primeiro por ID, depois por nome (normalizado) */}
+            {Array.from(
+              new Map(
+                recommendations.map(rec => [
+                  `${rec.restaurant.id}-${rec.restaurant.name.toLowerCase().trim()}`,
+                  rec
+                ])
+              ).values()
+            ).map((rec) => (
               <RestaurantCard
                 key={rec.restaurant.id}
                 restaurant={{
@@ -230,8 +266,19 @@ export function Dashboard() {
         onComplete={() => {
           // Atualizar recomendações após simulação
           handleRefresh();
+          // Atualizar trigger para atualizar o painel de pedidos
+          setOrdersRefreshTrigger(prev => prev + 1);
         }}
+        onOrderCreated={handleOrderCreated}
       />
+
+      {/* Modal de Raciocínio do Chef (opcional) */}
+      {isDemoMode && (
+        <ChefReasoningModal
+          open={reasoningModalOpen}
+          onOpenChange={setReasoningModalOpen}
+        />
+      )}
     </div>
   );
 }

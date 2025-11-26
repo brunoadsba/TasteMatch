@@ -3,7 +3,7 @@ Serviço de integração com LLM (Groq API) para geração de insights contextua
 """
 
 import time
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta
 from groq import Groq
 from groq import APIConnectionError, APIError, RateLimitError
@@ -149,7 +149,8 @@ def generate_insight_with_retry(
     max_retries: int = 3,
     initial_delay: float = 1.0,
     max_delay: float = 10.0,
-    backoff_factor: float = 2.0
+    backoff_factor: float = 2.0,
+    max_tokens: int = 80
 ) -> Optional[str]:
     """
     Gera insight usando Groq API com retry e backoff exponencial.
@@ -185,7 +186,7 @@ def generate_insight_with_retry(
                     }
                 ],
                 temperature=0.7,  # Balance entre criatividade e consistência
-                max_tokens=80,  # Reduzido para textos mais concisos (evita cortes)
+                max_tokens=max_tokens,  # Tokens permitidos (padrão 80 para insights, mais para explicações)
                 timeout=10.0  # Timeout de 10 segundos
             )
             
@@ -337,4 +338,139 @@ def generate_fallback_insight(restaurant: Restaurant) -> str:
         f"Recomendamos {restaurant.name}, um restaurante de {cuisine_type_formatted} "
         f"com avaliação de {rating}/5.0 estrelas, baseado nas suas preferências."
     )
+
+
+def build_chef_explanation_prompt(
+    user_context: Dict[str, Any],
+    restaurant: Restaurant,
+    reasoning: List[str],
+    similarity_score: float,
+    confidence: float,
+    user_patterns: Optional[Dict[str, Any]] = None
+) -> str:
+    """
+    Constrói prompt para geração de explicação personalizada do Chef.
+    
+    Args:
+        user_context: Contexto do usuário (nome, total de pedidos, etc.)
+        restaurant: Restaurante recomendado
+        reasoning: Lista de razões para a recomendação
+        similarity_score: Score de similaridade (0.0 a 1.0)
+        confidence: Confiança da recomendação (0.0 a 1.0)
+        user_patterns: Padrões do usuário (opcional)
+        
+    Returns:
+        str: Prompt completo formatado
+    """
+    user_name = user_context.get("name", "Usuário")
+    total_orders = user_context.get("total_orders", 0)
+    favorite_cuisines = user_context.get("favorite_cuisines", [])
+    
+    # Informações do restaurante
+    restaurant_name = restaurant.name
+    cuisine_type = restaurant.cuisine_type
+    cuisine_type_formatted = format_cuisine_type(cuisine_type)
+    rating = float(restaurant.rating or 0)
+    description = restaurant.description or "Sem descrição disponível"
+    price_range = restaurant.price_range or "não especificado"
+    
+    # Construir prompt
+    prompt = f"""Você é um Chef especialista em recomendações da TasteMatch. 
+Seu papel é fazer uma recomendação única, direta e personalizada para o usuário, explicando por que este restaurante foi escolhido especialmente para ele.
+
+CONTEXTO DO USUÁRIO:
+- Nome: {user_name}
+- Total de pedidos: {total_orders}
+- Culinárias favoritas: {', '.join(favorite_cuisines) if favorite_cuisines else 'Ainda explorando preferências'}
+{f'- Padrões: {user_patterns}' if user_patterns else ''}
+
+RESTAURANTE RECOMENDADO:
+- Nome: {restaurant_name}
+- Tipo: {cuisine_type_formatted}
+- Avaliação: {rating}/5.0
+- Faixa de preço: {price_range}
+- Descrição: {description}
+
+RAZÕES DA ESCOLHA:
+{chr(10).join(f'- {reason}' for reason in reasoning) if reasoning else '- Baseado nas suas preferências e padrões de pedidos'}
+
+INSTRUÇÕES IMPORTANTES:
+- Seja DIRETO e CONVINCENTE (como um chef recomenda pessoalmente)
+- Use tom CONVERSACIONAL e AMIGÁVEL (1ª pessoa: "eu recomendo", "escolhi para você")
+- Mencione o NOME do restaurante de forma natural
+- Explique o "POR QUÊ" de forma clara e específica (use as razões fornecidas)
+- Destaque o que torna esta escolha ESPECIAL para este usuário
+- Seja BREVE mas IMPACTANTE (3-4 frases, máximo 100 palavras)
+- Use português do Brasil
+- Seja ENTUASIÁSTA mas AUTÊNTICO
+- Conecte com o histórico do usuário quando relevante
+- Termine com um convite sutil para experimentar
+- Não mencione termos técnicos como "score de similaridade" ou números de similaridade
+
+ESTRUTURA SUGERIDA:
+1. Abertura: "Eu escolhi [nome do restaurante] especialmente para você porque..."
+2. Corpo: Explicar 2-3 razões principais (usar as razões fornecidas)
+3. Fechamento: Convite sutil para experimentar
+
+Exemplo de BOA explicação:
+"Eu escolhi {restaurant_name} especialmente para você porque você costuma pedir comida {cuisine_type} e este restaurante tem uma avaliação excelente de {rating}/5.0. Além disso, é uma opção nova que ainda não experimentou, perfeita para variar seus pedidos. Tenho certeza que você vai adorar!"
+
+Gere a explicação do Chef (máximo 100 palavras):"""
+    
+    return prompt
+
+
+def generate_chef_explanation(
+    user_id: int,
+    restaurant: Restaurant,
+    reasoning: List[str],
+    similarity_score: float,
+    confidence: float,
+    user_context: Dict[str, Any],
+    user_patterns: Optional[Dict[str, Any]] = None,
+    db: Optional[Any] = None
+) -> str:
+    """
+    Gera explicação personalizada do Chef para a recomendação escolhida.
+    
+    Args:
+        user_id: ID do usuário
+        restaurant: Restaurante recomendado
+        reasoning: Lista de razões para a recomendação
+        similarity_score: Score de similaridade
+        confidence: Confiança da recomendação
+        user_context: Contexto do usuário
+        user_patterns: Padrões do usuário (opcional)
+        db: Sessão do banco de dados (opcional)
+        
+    Returns:
+        str: Explicação gerada pelo Chef
+    """
+    # Construir prompt
+    prompt = build_chef_explanation_prompt(
+        user_context=user_context,
+        restaurant=restaurant,
+        reasoning=reasoning,
+        similarity_score=similarity_score,
+        confidence=confidence,
+        user_patterns=user_patterns
+    )
+    
+    # Gerar explicação com retry (mais tokens para explicação mais completa)
+    explanation = generate_insight_with_retry(prompt, max_retries=3, max_tokens=150)
+    
+    # Fallback: explicação genérica baseada nas razões
+    if not explanation:
+        rating = float(restaurant.rating or 0)
+        cuisine_type_formatted = format_cuisine_type(restaurant.cuisine_type)
+        
+        reasoning_text = ". ".join(reasoning) if reasoning else "baseado nas suas preferências"
+        
+        explanation = (
+            f"Eu escolhi {restaurant.name} especialmente para você porque {reasoning_text}. "
+            f"Este restaurante de {cuisine_type_formatted} tem uma avaliação de {rating}/5.0 "
+            f"e tenho certeza que você vai adorar!"
+        )
+    
+    return explanation
 

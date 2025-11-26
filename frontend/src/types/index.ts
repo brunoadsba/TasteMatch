@@ -70,6 +70,15 @@ export interface RecommendationsResponse {
   generated_at: string;
 }
 
+export interface ChefRecommendation {
+  restaurant: Restaurant;
+  similarity_score: number;
+  explanation: string;
+  reasoning: string[];
+  confidence: number;
+  generated_at: string;
+}
+
 export interface AuthResponse {
   user: User;
   token: string;

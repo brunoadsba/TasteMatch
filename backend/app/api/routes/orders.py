@@ -75,6 +75,7 @@ def list_user_orders(
             "total_amount": float(order.total_amount) if order.total_amount else None,
             "items": json.loads(order.items) if order.items else [],
             "rating": order.rating,
+            "is_simulation": order.is_simulation,  # Campo necessário para diferenciar pedidos simulados
             "created_at": order.created_at.isoformat() + "Z"
         }
         orders_data.append(order_dict)
@@ -130,6 +131,7 @@ def create_new_order(
         "total_amount": db_order.total_amount,
         "items": json.loads(db_order.items) if db_order.items else None,
         "rating": db_order.rating,
+        "is_simulation": db_order.is_simulation,  # Campo necessário para diferenciar pedidos simulados
         "created_at": db_order.created_at
     }
     

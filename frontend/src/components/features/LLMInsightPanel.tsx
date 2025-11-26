@@ -2,23 +2,41 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Brain, Sparkles } from 'lucide-react';
 import { useOrders } from '@/hooks/useOrders';
 import { useRecommendations } from '@/hooks/useRecommendations';
+import { useEffect, useRef } from 'react';
 
 interface LLMInsightPanelProps {
   className?: string;
+  refreshTrigger?: number; // Prop para forçar refresh quando mudar
 }
 
-export function LLMInsightPanel({ className }: LLMInsightPanelProps) {
-  const { orders, total: totalOrders } = useOrders({ limit: 100, autoFetch: true });
-  const { recommendations } = useRecommendations(1); // Pega apenas a primeira recomendação para análise
+export function LLMInsightPanel({ className, refreshTrigger }: LLMInsightPanelProps) {
+  const { orders, refresh: refreshOrders } = useOrders({ limit: 100, autoFetch: true });
+  const { recommendations, refresh: refreshRecommendations } = useRecommendations(1); // Pega apenas a primeira recomendação para análise
+  const previousRefreshTrigger = useRef(refreshTrigger);
 
-  // Filtrar apenas pedidos simulados
-  const simulatedOrders = orders.filter(order => order.is_simulation);
+  // Atualizar pedidos quando refreshTrigger mudar
+  useEffect(() => {
+    if (refreshTrigger !== undefined && refreshTrigger !== previousRefreshTrigger.current) {
+      previousRefreshTrigger.current = refreshTrigger;
+      // Atualizar pedidos e recomendações silenciosamente (sem toast) para evitar spam
+      refreshOrders();
+      refreshRecommendations(false); // Não mostrar toast em atualizações automáticas
+    }
+  }, [refreshTrigger, refreshOrders, refreshRecommendations]);
+
+  // Filtrar pedidos simulados e reais separadamente
+  // Tratar is_simulation como boolean (pode ser undefined, null, false, ou true)
+  const simulatedOrders = orders.filter(order => order.is_simulation === true);
+  const realOrders = orders.filter(order => order.is_simulation !== true);
   const simulatedCount = simulatedOrders.length;
-  const realOrdersCount = totalOrders - simulatedCount;
+  const realOrdersCount = realOrders.length;
+  const totalOrdersCount = simulatedCount + realOrdersCount;
 
   // Análise básica de preferências (pode ser melhorada com dados reais do backend)
   const analyzePreferences = () => {
-    if (simulatedCount === 0 && realOrdersCount === 0) {
+    // IMPORTANTE: Se não há pedidos simulados, sempre mostrar cold_start
+    // Não importa se há pedidos reais ou não - sem simulados = cold_start
+    if (simulatedCount === 0) {
       return {
         stage: 'cold_start',
         message: 'Seu perfil está em construção. As recomendações atuais são baseadas na popularidade geral e sazonalidade.',
@@ -26,7 +44,8 @@ export function LLMInsightPanel({ className }: LLMInsightPanelProps) {
       };
     }
 
-    if (simulatedCount < 5) {
+    // Apenas mostrar learning/personalized se houver pedidos simulados (verificação explícita)
+    if (simulatedCount > 0 && simulatedCount < 5) {
       return {
         stage: 'learning',
         message: `Em evolução - ${simulatedCount} pedido(s) simulado(s) processado(s). Continue simulando pedidos para personalização completa.`,
@@ -38,11 +57,12 @@ export function LLMInsightPanel({ className }: LLMInsightPanelProps) {
       };
     }
 
-    // Análise avançada (simulada)
-    const topRecommendation = recommendations[0];
+    // Análise avançada (simulada) - só chega aqui se simulatedCount >= 5
     const avgRating = simulatedOrders
       .filter(o => o.rating)
       .reduce((sum, o) => sum + (o.rating || 0), 0) / simulatedOrders.filter(o => o.rating).length;
+
+    const topRecommendation = recommendations[0];
 
     return {
       stage: 'personalized',
@@ -51,11 +71,9 @@ export function LLMInsightPanel({ className }: LLMInsightPanelProps) {
         topRecommendation
           ? `• Preferência forte: ${topRecommendation.restaurant.cuisine_type}`
           : '• Perfil em análise',
-        `• Avaliação média: ${avgRating ? avgRating.toFixed(1) : 'N/A'}`,
-        '• Sistema confiante nas recomendações',
-        topRecommendation
-          ? `• Recomendação principal: ${topRecommendation.restaurant.name}`
-          : '• Gerando recomendações personalizadas',
+        `• Avaliação média dos seus pedidos: ${avgRating ? avgRating.toFixed(1) : 'N/A'}`,
+        '• Status: Otimizando personalização',
+        '• Nível de confiança do modelo: Alto',
       ],
     };
   };
@@ -64,7 +82,7 @@ export function LLMInsightPanel({ className }: LLMInsightPanelProps) {
 
   return (
     <Card className={className}>
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b">
+      <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-slate-900 dark:to-indigo-900 border-b border-border">
         <CardTitle className="flex items-center gap-2 text-lg">
           <div className="relative">
             <Brain className="w-5 h-5 text-blue-600" />
@@ -77,7 +95,7 @@ export function LLMInsightPanel({ className }: LLMInsightPanelProps) {
         <div className="space-y-4">
           {/* Status Badge - apenas para learning e personalized */}
           {(insight.stage === 'learning' || insight.stage === 'personalized') && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {insight.stage === 'learning' && (
                 <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full animate-pulse">
                   🔄 Aprendendo...
@@ -88,19 +106,24 @@ export function LLMInsightPanel({ className }: LLMInsightPanelProps) {
                   ✨ Personalizado
                 </span>
               )}
+              {totalOrdersCount > 0 && (
+                <span className="text-xs text-gray-500">
+                  {totalOrdersCount} pedido{totalOrdersCount !== 1 ? 's' : ''} total
+                </span>
+              )}
             </div>
           )}
 
           {/* Mensagem Principal */}
-          <p className="text-sm text-gray-700 leading-relaxed">{insight.message}</p>
+          <p className="text-sm text-foreground leading-relaxed">{insight.message}</p>
 
           {/* Detalhes */}
           {insight.details.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
-              <h4 className="text-xs font-semibold text-blue-900 uppercase tracking-wide">
+            <div className="bg-blue-50 dark:bg-slate-900/60 border border-blue-200 dark:border-slate-700 rounded-lg p-4 space-y-2">
+              <h4 className="text-xs font-semibold text-blue-900 dark:text-blue-100 uppercase tracking-wide">
                 Detalhes da Análise
               </h4>
-              <ul className="space-y-1 text-sm text-blue-800">
+              <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-100">
                 {insight.details.map((detail, index) => (
                   <li key={index}>{detail}</li>
                 ))}
@@ -110,14 +133,29 @@ export function LLMInsightPanel({ className }: LLMInsightPanelProps) {
 
           {/* Informação Adicional */}
           {insight.stage === 'cold_start' && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+            <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-200">
               💡 <strong>Dica:</strong> Ative o Modo Demo e simule alguns pedidos para ver o sistema aprender suas preferências em tempo real!
             </div>
           )}
 
           {insight.stage === 'learning' && simulatedCount > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
-              📊 Faltam <strong>{5 - simulatedCount}</strong> pedido(s) simulado(s) para personalização completa.
+            <div className="space-y-3">
+              {/* Barra de Progresso Visual */}
+              <div className="bg-blue-50 dark:bg-slate-900/60 border border-blue-200 dark:border-slate-700 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-blue-900 dark:text-blue-100">Progresso de Personalização</span>
+                  <span className="text-xs text-blue-700 dark:text-blue-200 font-semibold">{simulatedCount}/5</span>
+                </div>
+                <div className="w-full bg-blue-200 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-400 dark:to-blue-500 h-2.5 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${Math.min((simulatedCount / 5) * 100, 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-blue-800 dark:text-blue-100 mt-2">
+                  📊 Faltam <strong>{5 - simulatedCount}</strong> pedido(s) simulado(s) para personalização completa.
+                </p>
+              </div>
             </div>
           )}
         </div>

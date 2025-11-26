@@ -217,8 +217,16 @@ def get_popular_restaurants(
     # Ordenar por rating (decrescente)
     restaurants_sorted = sorted(restaurants, key=lambda r: float(r.rating or 0), reverse=True)
     
+    # Remover duplicatas por ID antes de retornar
+    seen_ids = set()
+    unique_restaurants = []
+    for restaurant in restaurants_sorted:
+        if restaurant.id not in seen_ids:
+            unique_restaurants.append(restaurant)
+            seen_ids.add(restaurant.id)
+    
     recommendations = []
-    for restaurant in restaurants_sorted[:limit]:
+    for restaurant in unique_restaurants[:limit]:
         recommendations.append({
             "restaurant": restaurant,
             "similarity_score": 0.5  # Score neutro para fallback
@@ -316,7 +324,13 @@ def generate_recommendations(
     
     # 7. Calcular similaridade com cada restaurante
     recommendations = []
+    seen_restaurant_ids = set()  # Rastrear restaurantes já processados para evitar duplicatas
+    
     for restaurant in all_restaurants:
+        # Pular se já processado (evitar duplicatas)
+        if restaurant.id in seen_restaurant_ids:
+            continue
+        
         # Pular restaurantes recentes se solicitado
         if restaurant.id in recent_restaurant_ids:
             continue
@@ -339,6 +353,9 @@ def generate_recommendations(
                 "restaurant": restaurant,
                 "similarity_score": similarity
             })
+            
+            # Marcar como processado
+            seen_restaurant_ids.add(restaurant.id)
         except Exception as e:
             # Se erro ao processar restaurante, pular
             continue
@@ -346,6 +363,109 @@ def generate_recommendations(
     # 8. Ordenar por similaridade (maior primeiro)
     recommendations.sort(key=lambda x: x["similarity_score"], reverse=True)
     
-    # 9. Retornar top N
-    return recommendations[:limit]
+    # 9. Retornar top N (garantir que não há duplicatas mesmo após ordenação)
+    unique_recommendations = []
+    unique_ids = set()
+    for rec in recommendations:
+        restaurant_id = rec["restaurant"].id
+        if restaurant_id not in unique_ids:
+            unique_recommendations.append(rec)
+            unique_ids.add(restaurant_id)
+            if len(unique_recommendations) >= limit:
+                break
+    
+    return unique_recommendations
+
+
+def select_chef_recommendation(
+    recommendations: List[Dict[str, Any]],
+    user_id: int,
+    orders: List[Order],
+    db: Session
+) -> Optional[Dict[str, Any]]:
+    """
+    Seleciona a melhor recomendação do top 3 usando algoritmo de scoring ponderado.
+    
+    Algoritmo de scoring:
+    - Similaridade (peso 40%): Score de similaridade já calculado
+    - Rating do restaurante (peso 20%): Normalizado para 0.0-1.0
+    - Novidade (peso 20%): Não pedido recentemente (+0.2) ou pedido recentemente (-0.2)
+    - Match com padrões (peso 20%): Match com culinárias favoritas do usuário
+    
+    Args:
+        recommendations: Lista de top 3 recomendações (já ordenadas por similaridade)
+        user_id: ID do usuário
+        orders: Lista de pedidos do usuário
+        db: Sessão do banco de dados
+        
+    Returns:
+        Optional[Dict]: Melhor recomendação com razões ou None se lista vazia
+    """
+    if not recommendations:
+        return None
+    
+    # Extrair padrões do usuário
+    restaurants = get_restaurants(db, skip=0, limit=10000)
+    user_patterns = extract_user_patterns(user_id, orders, restaurants)
+    favorite_cuisines = set(user_patterns.get("favorite_cuisines", []))
+    
+    # IDs de restaurantes pedidos recentemente (últimos 10 pedidos)
+    recent_restaurant_ids = set()
+    if orders:
+        recent_orders = sorted(orders, key=lambda o: o.order_date, reverse=True)[:10]
+        recent_restaurant_ids = {order.restaurant_id for order in recent_orders}
+    
+    # Calcular score ponderado para cada recomendação
+    scored_recommendations = []
+    
+    for rec in recommendations[:3]:  # Top 3 apenas
+        restaurant = rec["restaurant"]
+        similarity_score = rec["similarity_score"]
+        
+        # 1. Similaridade (peso 40%) - já normalizado 0.0-1.0
+        similarity_weight = similarity_score * 0.4
+        
+        # 2. Rating do restaurante (peso 20%) - normalizar para 0.0-1.0
+        rating_normalized = float(restaurant.rating or 0) / 5.0
+        rating_weight = rating_normalized * 0.2
+        
+        # 3. Novidade (peso 20%)
+        # Se não foi pedido recentemente: +0.2 (peso completo), se foi: 0.0 (sem bônus)
+        novelty_weight = 0.2 if restaurant.id not in recent_restaurant_ids else 0.0
+        
+        # 4. Match com padrões (peso 20%)
+        # Se a culinária está nas favoritas: +0.2, senão: 0.0
+        pattern_match = 0.2 if restaurant.cuisine_type in favorite_cuisines else 0.0
+        pattern_weight = pattern_match * 0.2
+        
+        # Score final (soma ponderada)
+        final_score = similarity_weight + rating_weight + novelty_weight + pattern_weight
+        
+        # Razões para a escolha
+        reasoning = []
+        if similarity_score > 0.7:
+            reasoning.append("Alta similaridade com suas preferências")
+        if rating_normalized > 0.8:
+            reasoning.append(f"Excelente avaliação ({restaurant.rating}/5.0)")
+        if restaurant.id not in recent_restaurant_ids:
+            reasoning.append("Restaurante novo para você")
+        if restaurant.cuisine_type in favorite_cuisines:
+            reasoning.append(f"Combina com seu gosto por {restaurant.cuisine_type}")
+        
+        scored_recommendations.append({
+            "restaurant": restaurant,
+            "similarity_score": similarity_score,
+            "final_score": final_score,
+            "reasoning": reasoning,
+            "confidence": min(1.0, max(0.0, final_score))  # Garantir 0.0-1.0
+        })
+    
+    # Ordenar por score final (maior primeiro)
+    scored_recommendations.sort(key=lambda x: x["final_score"], reverse=True)
+    
+    # Retornar a melhor recomendação
+    if scored_recommendations:
+        return scored_recommendations[0]
+    
+    return None
 

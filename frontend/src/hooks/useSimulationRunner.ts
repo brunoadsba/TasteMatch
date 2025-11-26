@@ -22,7 +22,8 @@ interface UseSimulationRunnerReturn {
  */
 export function useSimulationRunner(
   onProgress?: (step: number, total: number) => void,
-  onComplete?: () => void
+  onComplete?: () => void,
+  onOrderCreated?: () => void // Callback quando um pedido é criado
 ): UseSimulationRunnerReturn {
   const { simulateOrder } = useSimulateOrder();
   const { refresh: refreshRecommendations } = useRecommendations(12);
@@ -34,29 +35,81 @@ export function useSimulationRunner(
   const [error, setError] = useState<string | null>(null);
 
   /**
+   * Normaliza tipos de culinária para corresponder ao formato do banco de dados.
+   * Converte variações como "Japonês" -> "japonesa", "Italiana" -> "italiana"
+   */
+  const normalizeCuisineType = (cuisineType: string): string[] => {
+    const normalized = cuisineType.toLowerCase().trim();
+    const variations: string[] = [normalized];
+    
+    // Mapeamento de variações comuns (masculino -> feminino)
+    const mappings: Record<string, string> = {
+      'japonês': 'japonesa',
+      'italiano': 'italiana',
+      'francês': 'francesa',
+      'brasileiro': 'brasileira',
+      'chinês': 'chinesa',
+      'mexicano': 'mexicana',
+      'português': 'portuguesa',
+    };
+    
+    // Adicionar variação feminina se existir no mapeamento
+    if (mappings[normalized]) {
+      variations.push(mappings[normalized]);
+    }
+    
+    // Tentar todas as variações
+    const allVariations: string[] = [];
+    for (const variation of variations) {
+      allVariations.push(variation); // Ex: "japonesa"
+      allVariations.push(`comida ${variation}`); // Ex: "comida japonesa"
+    }
+    
+    return [...new Set(allVariations)]; // Remove duplicatas
+  };
+
+  /**
    * Busca um restaurante por tipo de culinária.
+   * Tenta múltiplas variações do tipo para encontrar correspondência.
    * Retorna o primeiro restaurante encontrado do tipo especificado.
    */
   const findRestaurantByCuisine = async (cuisineType: string): Promise<number | null> => {
     try {
-      const response = await api.getRestaurants({
-        cuisine_type: cuisineType,
-        limit: 1,
-        sort_by: 'rating_desc', // Pega o melhor avaliado
-      });
+      // Gerar variações do tipo de culinária
+      const variations = normalizeCuisineType(cuisineType);
       
-      if (response.restaurants && response.restaurants.length > 0) {
-        return response.restaurants[0].id;
+      // Tentar busca exata para cada variação
+      for (const variation of variations) {
+        const response = await api.getRestaurants({
+          cuisine_type: variation,
+          limit: 1,
+          sort_by: 'rating_desc',
+        });
+        
+        if (response.restaurants && response.restaurants.length > 0) {
+          return response.restaurants[0].id;
+        }
       }
       
-      // Se não encontrou pelo tipo exato, tenta busca textual
+      // Se não encontrou por busca exata, tentar busca textual (buscar mais resultados)
       const searchResponse = await api.getRestaurants({
-        search: cuisineType,
-        limit: 1,
+        search: variations[0], // Usar a primeira variação para busca textual
+        limit: 10, // Buscar mais para ter mais opções
         sort_by: 'rating_desc',
       });
       
       if (searchResponse.restaurants && searchResponse.restaurants.length > 0) {
+        // Procurar o primeiro que tenha o tipo de culinária similar
+        const found = searchResponse.restaurants.find(r => {
+          const restaurantCuisine = (r.cuisine_type || '').toLowerCase();
+          return variations.some(v => restaurantCuisine.includes(v) || v.includes(restaurantCuisine));
+        });
+        
+        if (found) {
+          return found.id;
+        }
+        
+        // Se não encontrou similar, retorna o primeiro da busca (melhor avaliado)
         return searchResponse.restaurants[0].id;
       }
       
@@ -121,6 +174,9 @@ export function useSimulationRunner(
           continue; // Continua mesmo com erro
         }
         
+        // NÃO notificar após cada pedido para evitar múltiplos toasts sobrepostos
+        // A notificação acontecerá apenas no final da simulação completa
+        
         // Atualizar progresso
         const newProgress = Math.round(((i + 1) / orders.length) * 100);
         setProgress(newProgress);
@@ -129,18 +185,24 @@ export function useSimulationRunner(
           onProgress(i + 1, orders.length);
         }
         
-        // Delay entre pedidos para criar suspense (500ms)
+        // Delay entre pedidos aumentado para dar tempo de ler as mensagens do terminal (1500ms)
         if (i < orders.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 1500));
         }
       }
       
-      // Atualizar recomendações após todos os pedidos
-      toast.success('Simulação concluída!', {
-        description: `${orders.length} pedido(s) criado(s). Atualizando recomendações...`,
-      });
+      // Atualizar recomendações após todos os pedidos (sem toast duplicado)
+      await refreshRecommendations(false); // Não mostrar toast aqui, vamos mostrar um único resumo
       
-      await refreshRecommendations();
+      // Notificar que pedidos foram criados (uma única vez no final)
+      if (onOrderCreated) {
+        onOrderCreated();
+      }
+      
+      toast.success('Simulação concluída!', {
+        description: `${orders.length} pedido(s) criado(s). Recomendações atualizadas.`,
+        duration: 3000, // Mostrar por 3 segundos
+      });
       
       if (onComplete) {
         onComplete();
@@ -178,8 +240,13 @@ export function useSimulationRunner(
       });
       
       if (success) {
-        // Atualizar recomendações
-        await refreshRecommendations();
+        // Notificar que um pedido foi criado (para atualizar UI)
+        if (onOrderCreated) {
+          onOrderCreated();
+        }
+        
+        // Atualizar recomendações sem toast (evitar spam de notificações)
+        await refreshRecommendations(false);
         
         if (onComplete) {
           onComplete();

@@ -19,7 +19,15 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 - 💡 Cria insights contextualizados com IA generativa explicando **por quê** cada restaurante foi recomendado
 - ⚡ Processa recomendações em tempo real com cache inteligente
 - 🔐 Sistema completo de autenticação JWT
-- 🎨 Interface moderna com React + TypeScript + Shadcn/UI
+- 🎨 Interface moderna com React + TypeScript + Shadcn/UI, com tema claro/escuro
+
+### Principais recursos de demonstração
+
+- **Modo Demonstração**: ativa um fluxo guiado para simular pedidos sem impactar dados reais
+- **Chef Recomenda**: card hero que destaca a recomendação principal do usuário, com explicação em linguagem natural
+- **Raciocínio do Chef**: modal com explicação detalhada do porquê daquela escolha, baseada no perfil do usuário
+- **Simulador de Pedidos**: quick personas (Vida Saudável, Comfort Food, Gourmet) e modo manual para criar pedidos simulados
+- **Terminal de Raciocínio da IA**: terminal visual que mostra passo a passo como o sistema atualiza o perfil e recalcula recomendações
 
 ### Status do Projeto
 
@@ -291,7 +299,6 @@ tastematch/
 
 - Melhorias de UX (toasts, loading states mais visuais)
 - Testes automatizados (pytest)
-- Deploy em produção
 - Histórico de pedidos no frontend (feature adicional)
 
 ---
@@ -511,7 +518,7 @@ Projeto de demonstração técnica - Uso educacional.
 
 **Desenvolvido com ❤️ para demonstrar capacidade técnica em IA e desenvolvimento de sistemas.**
 
-**Última atualização:** 24/11/2025  
+**Última atualização:** 26/11/2025  
 **Status:** ✅ MVP Funcional - **DEPLOYADO EM PRODUÇÃO**
 
 🌐 **Acesse agora:** https://tastematch.netlify.app

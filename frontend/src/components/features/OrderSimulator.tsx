@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -19,17 +19,19 @@ interface OrderSimulatorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onComplete?: () => void;
+  onOrderCreated?: () => void; // Callback quando um pedido é criado
 }
 
-export function OrderSimulator({ open, onOpenChange, onComplete }: OrderSimulatorProps) {
+export function OrderSimulator({ open, onOpenChange, onComplete, onOrderCreated }: OrderSimulatorProps) {
   const [activeTab, setActiveTab] = useState<'quick' | 'manual'>('quick');
   const [currentScenarioId, setCurrentScenarioId] = useState<string>('fit');
+  const currentScenarioIdRef = useRef<string>('fit');
   const { logs, clearLogs, simulateReasoning } = useAIReasoning();
   
   const { runScenario, runCustomOrder, isRunning, progress, currentStep, totalSteps } = useSimulationRunner(
     async (step, total) => {
       // Callback de progresso - gera logs do terminal
-      await simulateReasoning(currentScenarioId, step, total);
+      await simulateReasoning(currentScenarioIdRef.current, step, total);
     },
     () => {
       // Callback de conclusão
@@ -40,6 +42,12 @@ export function OrderSimulator({ open, onOpenChange, onComplete }: OrderSimulato
       setTimeout(() => {
         onOpenChange(false);
       }, 2000);
+    },
+    () => {
+      // Callback quando um pedido é criado - atualizar painel dinamicamente
+      if (onOrderCreated) {
+        onOrderCreated();
+      }
     }
   );
 
@@ -53,7 +61,8 @@ export function OrderSimulator({ open, onOpenChange, onComplete }: OrderSimulato
 
   const handleQuickPersona = async (scenario: SimulationScenario) => {
     clearLogs(); // Limpar logs anteriores
-    setCurrentScenarioId(scenario.id); // Salvar ID do cenário para logs
+    setCurrentScenarioId(scenario.id); // Salvar ID do cenário para logs (para UI)
+    currentScenarioIdRef.current = scenario.id; // Garantir que logs usem o cenário correto
     await runScenario(scenario);
   };
 
@@ -146,7 +155,7 @@ export function OrderSimulator({ open, onOpenChange, onComplete }: OrderSimulato
                     <CardHeader>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-4xl">{scenario.icon}</span>
-                        {isRunning && (
+                        {isRunning && currentScenarioId === scenario.id && (
                           <Loader2 className="w-5 h-5 animate-spin" />
                         )}
                       </div>

@@ -21,9 +21,9 @@ export function RestaurantCard({ restaurant, onViewInsight }: RestaurantCardProp
   const formatPriceRange = (range?: string) => {
     if (!range) return 'N/A';
     const ranges: Record<string, string> = {
-      low: 'R$',
-      medium: 'R$ R$',
-      high: 'R$ R$ R$',
+      low: 'R$ 15-30',
+      medium: 'R$ 30-50',
+      high: 'R$ 50+',
     };
     return ranges[range] || range;
   };

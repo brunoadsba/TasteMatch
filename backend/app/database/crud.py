@@ -90,7 +90,17 @@ def get_restaurants(
     
     stmt = stmt.offset(skip).limit(limit)
     result = db.execute(stmt)
-    return list(result.scalars().all())
+    restaurants = list(result.scalars().all())
+    
+    # Garantir que não há duplicatas (mesmo ID) - segurança adicional
+    seen_ids = set()
+    unique_restaurants = []
+    for restaurant in restaurants:
+        if restaurant.id not in seen_ids:
+            unique_restaurants.append(restaurant)
+            seen_ids.add(restaurant.id)
+    
+    return unique_restaurants
 
 
 def create_restaurant(db: Session, restaurant: RestaurantCreate, embedding: Optional[str] = None) -> Restaurant:

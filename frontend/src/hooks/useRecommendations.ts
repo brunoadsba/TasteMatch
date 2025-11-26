@@ -7,7 +7,7 @@ interface UseRecommendationsReturn {
   recommendations: Recommendation[];
   loading: boolean;
   error: string | null;
-  refresh: () => Promise<void>;
+  refresh: (showToast?: boolean) => Promise<void>;
 }
 
 export function useRecommendations(limit: number = 10): UseRecommendationsReturn {
@@ -15,7 +15,7 @@ export function useRecommendations(limit: number = 10): UseRecommendationsReturn
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchRecommendations = async (refreshCache: boolean = false) => {
+  const fetchRecommendations = async (refreshCache: boolean = false, showToast: boolean = true) => {
     try {
       setLoading(true);
       setError(null);
@@ -24,9 +24,9 @@ export function useRecommendations(limit: number = 10): UseRecommendationsReturn
       const recommendationsArray = Array.isArray(data) ? data : [];
       setRecommendations(recommendationsArray);
       
-      if (refreshCache && recommendationsArray.length > 0) {
+      if (refreshCache && recommendationsArray.length > 0 && showToast) {
         toast.success('Recomendações atualizadas!', {
-          description: `${recommendationsArray.length} restaurantes encontrados.`,
+          description: `${recommendationsArray.length} restaurante(s) encontrado(s).`,
         });
       }
     } catch (err) {
@@ -34,8 +34,8 @@ export function useRecommendations(limit: number = 10): UseRecommendationsReturn
       setError(errorMessage);
       setRecommendations([]);
       
-      // Não mostrar toast de erro no carregamento inicial
-      if (refreshCache) {
+      // Não mostrar toast de erro no carregamento inicial ou atualizações automáticas
+      if (refreshCache && showToast) {
         toast.error('Falha ao atualizar recomendações', {
           description: 'Tente novamente em alguns instantes.',
         });
@@ -53,7 +53,7 @@ export function useRecommendations(limit: number = 10): UseRecommendationsReturn
     recommendations,
     loading,
     error,
-    refresh: () => fetchRecommendations(true),
+    refresh: (showToast: boolean = true) => fetchRecommendations(true, showToast),
   };
 }
 

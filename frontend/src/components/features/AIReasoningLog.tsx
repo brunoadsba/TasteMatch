@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2, ChevronDown, ChevronUp, Terminal } from 'lucide-react';
-import type { AIReasoningLog } from '@/hooks/useAIReasoning';
+import type { AIReasoningLog } from '@/contexts/AIReasoningContext';
 import { cn } from '@/lib/utils';
 
 interface AIReasoningLogProps {
