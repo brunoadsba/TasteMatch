@@ -442,6 +442,9 @@ npm run dev
 ### Status
 - ✅ Mobile-First implementado e testado
 - ✅ Testes E2E funcionando (0 falhas)
+- ✅ Melhorias de UX (Fase 5.3) implementadas
+  - Overscroll behavior para prevenir scroll da página de fundo
+  - Botões posicionados na parte inferior do drawer (melhor alcance)
 - ✅ Build sem erros
 - ✅ Documentação atualizada
 
