@@ -104,10 +104,10 @@ export function LLMInsightPanel({ className, refreshTrigger }: LLMInsightPanelPr
   return (
     <Card className={className}>
       <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-slate-900 dark:to-indigo-900 border-b border-border">
-        <CardTitle className="flex items-center gap-2 text-lg">
+        <CardTitle className="flex items-center gap-2 text-base md:text-lg">
           <div className="relative">
-            <Brain className="w-5 h-5 text-blue-600" />
-            <Sparkles className="w-3 h-3 text-purple-500 absolute -top-1 -right-1" />
+            <Brain className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+            <Sparkles className="w-2.5 h-2.5 md:w-3 md:h-3 text-purple-500 absolute -top-1 -right-1" />
           </div>
           <span>Análise de Perfil e Sugestão</span>
         </CardTitle>
@@ -118,12 +118,12 @@ export function LLMInsightPanel({ className, refreshTrigger }: LLMInsightPanelPr
           {(insight.stage === 'learning' || insight.stage === 'personalized') && (
             <div className="flex items-center gap-2 flex-wrap">
               {insight.stage === 'learning' && (
-                <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full animate-pulse">
+                <span className="px-2 md:px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full animate-pulse">
                   🔄 Aprendendo...
                 </span>
               )}
               {insight.stage === 'personalized' && (
-                <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                <span className="px-2 md:px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
                   ✨ Personalizado
                 </span>
               )}
@@ -136,7 +136,7 @@ export function LLMInsightPanel({ className, refreshTrigger }: LLMInsightPanelPr
           )}
 
           {/* Mensagem Principal */}
-          <p className="text-sm text-foreground leading-relaxed">{insight.message}</p>
+          <p className="text-xs md:text-sm text-foreground leading-relaxed">{insight.message}</p>
 
           {/* Detalhes */}
           {insight.details.length > 0 && (
@@ -144,7 +144,7 @@ export function LLMInsightPanel({ className, refreshTrigger }: LLMInsightPanelPr
               <h4 className="text-xs font-semibold text-blue-900 dark:text-blue-100 uppercase tracking-wide">
                 Detalhes da Análise
               </h4>
-              <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-100">
+              <ul className="space-y-1 text-xs md:text-sm text-blue-800 dark:text-blue-100">
                 {insight.details.map((detail, index) => (
                   <li key={index}>{detail}</li>
                 ))}

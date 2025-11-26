@@ -14,6 +14,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Tooltip } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
+import { AppHeader } from '@/components/layout';
 
 export function Dashboard() {
   const { user, logout } = useAuth();
@@ -79,99 +80,89 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <header className="bg-card border-b border-border">
-        {/* Barra de Demo Mode */}
-        {isDemoMode && (
-          <div className="bg-blue-600 text-white px-4 py-2 text-center text-sm font-medium">
-            🎯 Modo Demonstração Ativo - Dados simulados não serão salvos permanentemente
-          </div>
-        )}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">TasteMatch</h1>
-              <p className="text-sm text-gray-500">Recomendações personalizadas para você</p>
-            </div>
-            <div className="flex items-center gap-4">
-              {/* Toggle Tema Claro/Escuro */}
-              <ThemeToggle />
+      {/* Header com AppHeader */}
+      <AppHeader
+        title="TasteMatch"
+        subtitle="Recomendações personalizadas para você"
+        demoModeBar={
+          isDemoMode ? (
+            <span>🎯 Modo Demonstração Ativo - Dados simulados não serão salvos permanentemente</span>
+          ) : undefined
+        }
+      >
+        {/* Toggle Tema Claro/Escuro */}
+        <ThemeToggle />
 
-              {/* Toggle Modo Demo com Tooltip */}
-              <Tooltip
-                content={
-                  isDemoMode
-                    ? "Clique para sair do modo demo e fazer login"
-                    : "Explore o TasteMatch sem criar conta. Simule pedidos e veja recomendações personalizadas."
-                }
-                side="bottom"
-              >
-                <Button
-                  variant={isDemoMode ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    if (isDemoMode) {
-                      toast.success('Modo demo encerrado', {
-                        description: 'Faça login para continuar usando o TasteMatch.',
-                      });
-                    } else {
-                      toast.info('Modo demo ativado', {
-                        description: 'Explore o TasteMatch sem criar conta. Dados simulados não serão salvos.',
-                      });
-                    }
-                    setIsDemoMode(!isDemoMode);
-                  }}
-                  className={isDemoMode ? "bg-blue-600 hover:bg-blue-700" : ""}
-                  aria-label={isDemoMode ? "Sair do modo demo" : "Ativar modo demo"}
-                >
-                  {isDemoMode ? (
-                    <>
-                      <X className="w-4 h-4 mr-2" />
-                      Sair do Modo Demo
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4 mr-2" />
-                      Modo Demo
-                    </>
-                  )}
-                </Button>
-              </Tooltip>
-              
-              {/* Botão Reset Simulação */}
-              {isDemoMode && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleResetSimulation}
-                    disabled={resetting}
-                    className="text-red-600 border-red-300 hover:bg-red-50"
-                  >
-                    <RotateCcw className={`w-4 h-4 mr-2 ${resetting ? 'animate-spin' : ''}`} />
-                    Resetar
-                  </Button>
-                </>
-              )}
-              
-              <Link to="/orders">
-                <Button variant="outline" size="sm">
-                  <History className="w-4 h-4 mr-2" />
-                  Histórico
-                </Button>
-              </Link>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <User className="w-4 h-4" />
-                <span>{user?.name}</span>
-              </div>
-              <Button variant="outline" onClick={logout} size="sm">
-                <LogOut className="w-4 h-4 mr-2" />
-                Sair
-              </Button>
-            </div>
-          </div>
+        {/* Toggle Modo Demo com Tooltip */}
+        <Tooltip
+          content={
+            isDemoMode
+              ? "Clique para sair do modo demo e fazer login"
+              : "Explore o TasteMatch sem criar conta. Simule pedidos e veja recomendações personalizadas."
+          }
+          side="bottom"
+        >
+          <Button
+            variant={isDemoMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => {
+              if (isDemoMode) {
+                toast.success('Modo demo encerrado', {
+                  description: 'Faça login para continuar usando o TasteMatch.',
+                });
+              } else {
+                toast.info('Modo demo ativado', {
+                  description: 'Explore o TasteMatch sem criar conta. Dados simulados não serão salvos.',
+                });
+              }
+              setIsDemoMode(!isDemoMode);
+            }}
+            className={isDemoMode ? "bg-blue-600 hover:bg-blue-700" : ""}
+            aria-label={isDemoMode ? "Sair do modo demo" : "Ativar modo demo"}
+          >
+            {isDemoMode ? (
+              <>
+                <X className="w-4 h-4 mr-2" />
+                Sair do Modo Demo
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 mr-2" />
+                Modo Demo
+              </>
+            )}
+          </Button>
+        </Tooltip>
+        
+        {/* Botão Reset Simulação */}
+        {isDemoMode && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleResetSimulation}
+            disabled={resetting}
+            className="text-red-600 border-red-300 hover:bg-red-50"
+          >
+            <RotateCcw className={`w-4 h-4 mr-2 ${resetting ? 'animate-spin' : ''}`} />
+            Resetar
+          </Button>
+        )}
+        
+        <Link to="/orders">
+          <Button variant="outline" size="sm">
+            <History className="w-4 h-4 mr-2" />
+            Histórico
+          </Button>
+        </Link>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <User className="w-4 h-4" />
+          <span>{user?.name}</span>
         </div>
-      </header>
+        <Button variant="outline" onClick={logout} size="sm">
+          <LogOut className="w-4 h-4 mr-2" />
+          Sair
+        </Button>
+      </AppHeader>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -202,17 +193,17 @@ export function Dashboard() {
           </div>
         )}
 
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-semibold">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+          <h2 className="text-xl md:text-2xl font-semibold">
             Restaurantes Recomendados
           </h2>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
             {isDemoMode && (
               <Button
                 onClick={() => setSimulatorOpen(true)}
                 disabled={refreshing || loading}
                 variant="default"
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 w-full md:w-auto"
               >
                 <Play className="w-4 h-4 mr-2" />
                 Simular Pedido
@@ -222,6 +213,7 @@ export function Dashboard() {
               onClick={handleRefresh}
               disabled={refreshing || loading}
               variant="outline"
+              className="w-full md:w-auto"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${refreshing || loading ? 'animate-spin' : ''}`} />
               {refreshing ? 'Atualizando...' : 'Atualizar'}

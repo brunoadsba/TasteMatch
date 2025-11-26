@@ -118,7 +118,7 @@ export function OrderSimulator({ open, onOpenChange, onComplete, onOrderCreated 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] md:max-w-3xl max-h-[85dvh] md:max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-blue-500" />
