@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { validateLoginForm, validateRegisterForm, type ValidationError } from '@/lib/validation';
+import { validateLoginForm, validateRegisterForm } from '@/lib/validation';
 
 export function Login() {
   const [isLogin, setIsLogin] = useState(true);
