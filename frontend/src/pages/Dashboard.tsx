@@ -98,7 +98,7 @@ export function Dashboard() {
           content={
             isDemoMode
               ? "Clique para sair do modo demo e fazer login"
-              : "Explore o TasteMatch sem criar conta. Simule pedidos e veja recomendações personalizadas."
+              : "Explore o TasteMatch. Simule pedidos e veja recomendações personalizadas."
           }
           side="bottom"
         >
@@ -112,7 +112,7 @@ export function Dashboard() {
                 });
               } else {
                 toast.info('Modo demo ativado', {
-                  description: 'Explore o TasteMatch sem criar conta. Dados simulados não serão salvos.',
+                  description: 'Explore o TasteMatch. Dados simulados não serão salvos.',
                 });
               }
               setIsDemoMode(!isDemoMode);
