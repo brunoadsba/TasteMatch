@@ -77,3 +77,9 @@ tmp/
 
 # Local Netlify folder
 .netlify
+
+# Playwright
+playwright-report/
+test-results/
+playwright/.cache/
+tests/screenshots/*.png
