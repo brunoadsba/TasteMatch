@@ -407,7 +407,237 @@ if self.SECRET_KEY == "change-this-secret-key-in-production-please":
 
 ---
 
-**Última atualização:** 24/11/2025  
+---
+
+## 🎯 Onboarding e Cold Start
+
+### Lição: Onboarding resolve cold start de forma elegante
+
+**Aprendizado:** Implementar onboarding gamificado permite gerar vetor sintético de preferências antes do primeiro pedido, resolvendo o problema de cold start.
+
+**Implementação:**
+- Usuário seleciona 1-5 culinárias preferidas
+- Sistema calcula centróide vetorial dos melhores restaurantes dessas culinárias
+- Vetor sintético salvo em `user_preferences.preference_embedding`
+- Recomendações personalizadas disponíveis desde o primeiro acesso
+
+**Benefícios:**
+- Melhor experiência do usuário (não precisa esperar histórico)
+- Recomendações relevantes desde o início
+- Reduz taxa de abandono de novos usuários
+
+**Lição:** Cold start não precisa ser problema. Onboarding bem projetado resolve isso elegantemente.
+
+---
+
+### Lição: Alinhar limites entre frontend e backend
+
+**Problema:** Frontend limitava seleção a 3 culinárias, backend aceitava até 5.
+
+**Causa:** Desenvolvimento paralelo sem sincronização de regras de negócio.
+
+**Solução:** 
+1. Verificar backend primeiro (fonte de verdade)
+2. Alinhar frontend com backend
+3. Atualizar mensagens de UI para refletir limite correto
+
+**Lição:** Sempre verificar backend como fonte de verdade para regras de negócio. Frontend deve seguir backend, não o contrário.
+
+---
+
+### Lição: Atualizar recomendações após onboarding
+
+**Problema:** Após completar onboarding, recomendações não atualizavam automaticamente.
+
+**Causa:** Navegação para dashboard não disparava refresh de dados.
+
+**Solução:**
+- Passar `state: { refreshRecommendations: true }` na navegação
+- Dashboard detecta state e chama `refresh()` automaticamente
+- Limpar state após uso para evitar refresh em navegações futuras
+
+**Lição:** Fluxos de onboarding devem atualizar dados automaticamente. Usuário não deve precisar recarregar página manualmente.
+
+---
+
+## 🌐 Frontend e CORS
+
+### Problema: Frontend em produção usando localhost
+
+**Erro:**
+```
+Access to fetch at 'http://localhost:8000/api/...' from origin 'https://tastematch.netlify.app' has been blocked by CORS policy
+```
+
+**Causa:** `API_BASE_URL` no frontend não detectava ambiente de produção corretamente.
+
+**Solução:**
+```typescript
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD ? 'https://tastematch-api.fly.dev' : 'http://localhost:8000');
+```
+
+**Lição:** Sempre detectar ambiente automaticamente. Não confiar apenas em variáveis de ambiente que podem não estar configuradas.
+
+---
+
+### Lição: Testar CORS em produção é essencial
+
+**Aprendizado:** CORS pode funcionar localmente mas falhar em produção se URLs não estiverem corretas.
+
+**Validação:**
+- Testar requisições do navegador em produção
+- Verificar console do navegador para erros de CORS
+- Validar que `API_BASE_URL` está correto em cada ambiente
+
+**Lição:** Sempre testar integração frontend-backend em produção. CORS é um problema comum e fácil de detectar.
+
+---
+
+## 🔄 Deploy e Integração
+
+### Lição: Deploy não garante que código está disponível
+
+**Problema:** Deploy concluído mas endpoint não disponível.
+
+**Causa:** 
+- Deploy executado antes do commit do código
+- Deploys interrompidos não completam
+- Código local diferente do código deployado
+
+**Solução:**
+1. Verificar commits antes de deploy
+2. Verificar logs do deploy para confirmar conclusão
+3. Validar que código está no repositório antes de deployar
+4. Forçar novo deploy se necessário
+
+**Lição:** Deploy bem-sucedido não significa código atualizado. Sempre validar que código correto foi deployado.
+
+---
+
+### Lição: CLI deploy é mais confiável que automático
+
+**Aprendizado:** Quando deploy automático não está configurado, usar CLI garante controle total.
+
+**Benefícios:**
+- Controle sobre quando deployar
+- Visibilidade completa do processo
+- Pode forçar deploy mesmo com código não commitado (se necessário)
+
+**Lição:** CLI deploy dá mais controle e visibilidade. Use quando precisar de precisão.
+
+---
+
+## 📝 Documentação
+
+### Lição: Atualizar documentação após cada feature
+
+**Aprendizado:** Documentação desatualizada causa confusão e perda de tempo.
+
+**Processo:**
+1. Atualizar README.md com novas funcionalidades
+2. Atualizar SPEC.md com novos endpoints
+3. Atualizar STATUS_PROJETO.md com sprints completos
+4. Criar documentos específicos para problemas resolvidos
+
+**Lição:** Documentação é parte do desenvolvimento, não etapa separada. Atualizar junto com código.
+
+---
+
+### Lição: Documentos específicos para problemas complexos
+
+**Aprendizado:** Criar documentos focados para problemas complexos facilita troubleshooting futuro.
+
+**Exemplos:**
+- `CORRECAO_CORS.md` - Detalhes da correção de CORS
+- `INVESTIGACAO_ONBOARDING.md` - Processo de investigação
+- `SOLUCAO_ONBOARDING.md` - Solução implementada
+
+**Lição:** Documentos específicos são mais úteis que tentar colocar tudo em um documento geral.
+
+---
+
+## 🎨 UX e Frontend
+
+### Lição: Tooltips devem ser concisos
+
+**Problema:** Tooltip do "Modo Demo" muito longo e confuso.
+
+**Solução:** Reduzir para mensagem direta e objetiva:
+- Antes: "Explore o TasteMatch sem criar conta. Simule pedidos e veja recomendações personalizadas baseadas em suas escolhas."
+- Depois: "Explore o TasteMatch sem criar conta. Simule pedidos e veja recomendações personalizadas."
+
+**Lição:** Tooltips devem ser informativos mas concisos. Menos é mais.
+
+---
+
+### Lição: Padronizar cálculos de display
+
+**Problema:** Similaridade score mostrado de formas diferentes (`toFixed(0)` vs `Math.round()`).
+
+**Causa:** Código desenvolvido em momentos diferentes sem padronização.
+
+**Solução:** 
+- Escolher um método (`Math.round()`)
+- Aplicar consistentemente em todos os componentes
+- Documentar padrão escolhido
+
+**Lição:** Padronizar cálculos e formatação desde o início. Consistência melhora UX.
+
+---
+
+## 🔧 Backend e Integração
+
+### Lição: Importar routers explicitamente
+
+**Problema:** Endpoint de onboarding retornava 404 mesmo após deploy.
+
+**Causa:** Router não estava sendo importado em `__init__.py`.
+
+**Solução:**
+```python
+from . import auth, users, restaurants, orders, recommendations, onboarding
+__all__ = ["auth", "users", "restaurants", "orders", "recommendations", "onboarding"]
+```
+
+**Lição:** Sempre verificar que novos routers estão importados e incluídos na lista de exports.
+
+---
+
+### Lição: Validar tipos de dados entre frontend e backend
+
+**Problema:** Frontend oferecia culinárias que não existiam no banco.
+
+**Causa:** Seed data do backend diferente das opções do frontend.
+
+**Solução:**
+1. Verificar seed data do backend primeiro
+2. Alinhar opções do frontend com dados reais
+3. Remover opções que não existem
+4. Adicionar opções que faltam
+
+**Lição:** Frontend deve refletir dados reais do backend. Sempre validar contra fonte de dados.
+
+---
+
+## 🎯 Resumo das Novas Lições
+
+1. **Onboarding resolve cold start elegantemente** - Não precisa esperar histórico
+2. **Alinhar limites entre frontend e backend** - Backend é fonte de verdade
+3. **Atualizar dados após onboarding** - UX deve ser fluida
+4. **Detectar ambiente automaticamente** - Não confiar apenas em variáveis
+5. **Testar CORS em produção** - Problema comum e fácil de detectar
+6. **Deploy não garante código atualizado** - Sempre validar
+7. **CLI deploy é mais confiável** - Mais controle e visibilidade
+8. **Atualizar documentação junto com código** - Não deixar para depois
+9. **Tooltips devem ser concisos** - Menos é mais
+10. **Padronizar cálculos de display** - Consistência melhora UX
+11. **Importar routers explicitamente** - Verificar sempre
+12. **Validar tipos de dados entre frontend e backend** - Alinhar sempre
+
+---
+
+**Última atualização:** 26/11/2025  
 **Projeto:** TasteMatch - Agente de Recomendação Inteligente  
-**Fase:** 12 - Deploy e Produção ✅
+**Fase:** 13 - Onboarding Gamificado + Correção de CORS ✅
 
