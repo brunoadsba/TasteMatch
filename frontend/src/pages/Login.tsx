@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { validateLoginForm, validateRegisterForm, type ValidationError } from '@/lib/validation';
 
 export function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -11,28 +12,73 @@ export function Login() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const { login, register } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
+    
+    // Validação no frontend
+    const validationErrors = isLogin
+      ? validateLoginForm(email, password)
+      : validateRegisterForm(email, password, name);
+    
+    if (validationErrors.length > 0) {
+      const errorsMap: Record<string, string> = {};
+      validationErrors.forEach((err) => {
+        errorsMap[err.field] = err.message;
+      });
+      setFieldErrors(errorsMap);
+      return;
+    }
+    
     setLoading(true);
 
     try {
       if (isLogin) {
         await login(email, password);
       } else {
-        if (!name.trim()) {
-          setError('Nome é obrigatório');
-          setLoading(false);
-          return;
-        }
         await register({ email, password, name });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao fazer login');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+    if (fieldErrors.email) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.email;
+        return newErrors;
+      });
+    }
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+    if (fieldErrors.password) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.password;
+        return newErrors;
+      });
+    }
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setName(e.target.value);
+    if (fieldErrors.name) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.name;
+        return newErrors;
+      });
     }
   };
 
@@ -56,9 +102,13 @@ export function Login() {
                   id="name"
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={handleNameChange}
                   placeholder="Seu nome completo"
                   required={!isLogin}
+                  error={!!fieldErrors.name}
+                  errorMessage={fieldErrors.name}
+                  aria-label="Nome completo"
+                  aria-required="true"
                 />
               </div>
             )}
@@ -70,9 +120,13 @@ export function Login() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleEmailChange}
                 placeholder="seu@email.com"
                 required
+                error={!!fieldErrors.email}
+                errorMessage={fieldErrors.email}
+                aria-label="Email"
+                aria-required="true"
               />
             </div>
             <div>
@@ -83,9 +137,13 @@ export function Login() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handlePasswordChange}
                 placeholder="••••••••"
                 required
+                error={!!fieldErrors.password}
+                errorMessage={fieldErrors.password}
+                aria-label="Senha"
+                aria-required="true"
               />
             </div>
             {error && (
@@ -104,8 +162,10 @@ export function Login() {
               onClick={() => {
                 setIsLogin(!isLogin);
                 setError('');
+                setFieldErrors({});
               }}
               className="text-sm text-blue-600 hover:underline"
+              aria-label={isLogin ? 'Ir para criação de conta' : 'Ir para login'}
             >
               {isLogin
                 ? 'Não tem conta? Criar conta'

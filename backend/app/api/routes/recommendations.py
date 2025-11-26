@@ -50,9 +50,10 @@ class ChefRecommendationResponse(BaseModel):
     """Resposta para recomendação única do Chef."""
     restaurant: RestaurantResponse
     similarity_score: float
-    explanation: str  # Explicação gerada por LLM
+    explanation: str  # Explicação gerada por LLM ou fallback
     reasoning: List[str]  # Lista de razões (ex: "Você costuma pedir comida vegetariana")
     confidence: float  # Confiança da recomendação (0.0 a 1.0)
+    has_insight: bool = True  # Indica se a explicação foi gerada por LLM (True) ou é fallback (False)
     generated_at: datetime
 
 
@@ -409,6 +410,7 @@ def get_chef_recommendation(
         confidence_clamped = max(0.0, min(1.0, float(confidence)))
         
         # 5. Gerar explicação personalizada do Chef
+        has_insight = True
         try:
             explanation = generate_chef_explanation(
                 user_id=current_user.id,
@@ -420,8 +422,21 @@ def get_chef_recommendation(
                 user_patterns=user_patterns,
                 db=db
             )
+            # Se explanation for None ou vazio, usar fallback
+            if not explanation:
+                has_insight = False
+                rating = float(restaurant.rating or 0)
+                cuisine_type_formatted = restaurant.cuisine_type
+                reasoning_text = ". ".join(reasoning) if reasoning else "baseado nas suas preferências"
+                
+                explanation = (
+                    f"Eu escolhi {restaurant.name} especialmente para você porque {reasoning_text}. "
+                    f"Este restaurante de {cuisine_type_formatted} tem uma avaliação de {rating}/5.0 "
+                    f"e tenho certeza que você vai adorar!"
+                )
         except Exception as e:
             # Fallback: explicação baseada nas razões
+            has_insight = False
             logger.warning(
                 "Erro ao gerar explicação do Chef, usando fallback",
                 extra={"user_id": current_user.id, "error": str(e)}
@@ -453,6 +468,7 @@ def get_chef_recommendation(
             explanation=explanation,
             reasoning=reasoning,
             confidence=confidence_clamped,
+            has_insight=has_insight,
             generated_at=generated_at
         )
         

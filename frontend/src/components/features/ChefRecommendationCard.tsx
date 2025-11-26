@@ -8,8 +8,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useChefRecommendation } from '@/hooks/useChefRecommendation';
-import { Star, ChefHat, Sparkles, RefreshCw, ArrowDown, Brain } from 'lucide-react';
+import { Star, ChefHat, Sparkles, RefreshCw, ArrowDown, Brain, AlertCircle } from 'lucide-react';
 
 interface ChefRecommendationCardProps {
   className?: string;
@@ -59,17 +60,28 @@ export function ChefRecommendationCard({
     }
   };
 
-  // Loading state
+  // Loading state com Skeleton melhorado
   if (loading && !chefRecommendation) {
     return (
-      <Card className={`border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 animate-pulse ${className}`}>
-        <CardHeader>
-          <div className="h-6 bg-amber-200 rounded w-32 mb-2"></div>
-          <div className="h-4 bg-amber-200 rounded w-24"></div>
+      <Card className={`border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900 dark:via-amber-950 dark:to-amber-900 ${className}`}>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between mb-2">
+            <Skeleton className="h-7 w-40" />
+            <Skeleton className="h-6 w-24" />
+          </div>
+          <Skeleton className="h-4 w-32" />
         </CardHeader>
-        <CardContent>
-          <div className="h-20 bg-amber-200 rounded w-full mb-4"></div>
-          <div className="h-10 bg-amber-200 rounded w-full"></div>
+        <CardContent className="space-y-5">
+          <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-4 rounded-full" />
+              <Skeleton className="h-4 w-12" />
+            </div>
+          </div>
+          <Skeleton className="h-24 w-full rounded-lg" />
+          <Skeleton className="h-10 w-full" />
         </CardContent>
       </Card>
     );
@@ -143,7 +155,7 @@ export function ChefRecommendationCard({
     return null;
   }
 
-  const { restaurant, explanation, reasoning, confidence, similarity_score } = chefRecommendation;
+  const { restaurant, explanation, reasoning, confidence, similarity_score, has_insight = true } = chefRecommendation;
 
   return (
     <>
@@ -185,6 +197,12 @@ export function ChefRecommendationCard({
 
           {/* Explicação do Chef - destaque com menos truncamento */}
           <div className="bg-white/80 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-700 rounded-lg p-4 shadow-md">
+            {!has_insight && (
+              <div className="flex items-start gap-2 mb-3 p-2 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded text-xs text-amber-800 dark:text-amber-200">
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>Recomendação baseada em similaridade. Insight do Chef temporariamente indisponível.</span>
+              </div>
+            )}
             <p className="text-base text-gray-800 dark:text-amber-50 leading-relaxed line-clamp-5">
               {explanation}
             </p>
@@ -216,6 +234,7 @@ export function ChefRecommendationCard({
               onClick={() => setIsModalOpen(true)}
               className="w-full bg-amber-600 hover:bg-amber-700 text-white"
               size="sm"
+              aria-label="Ver detalhes completos da recomendação do Chef"
             >
               Ver Recomendação Completa
             </Button>
@@ -227,8 +246,9 @@ export function ChefRecommendationCard({
                   size="sm"
                   onClick={handleScrollToRecommendations}
                   className="text-xs"
+                  aria-label="Ver outras opções de restaurantes recomendados"
                 >
-                  <ArrowDown className="w-3 h-3 mr-1" />
+                  <ArrowDown className="w-3 h-3 mr-1" aria-hidden="true" />
                   Outras Opções
                 </Button>
               )}
@@ -239,8 +259,12 @@ export function ChefRecommendationCard({
                   size="sm"
                   onClick={onViewReasoning}
                   className="text-xs"
+                  disabled={!has_insight}
+                  title={!has_insight ? "Raciocínio do Chef temporariamente indisponível" : "Ver raciocínio completo"}
+                  aria-label={!has_insight ? "Raciocínio do Chef temporariamente indisponível" : "Ver raciocínio completo do Chef"}
+                  aria-disabled={!has_insight}
                 >
-                  <Brain className="w-3 h-3 mr-1" />
+                  <Brain className="w-3 h-3 mr-1" aria-hidden="true" />
                   Raciocínio
                 </Button>
               )}

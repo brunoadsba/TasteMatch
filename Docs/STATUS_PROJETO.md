@@ -1,7 +1,7 @@
 # TasteMatch - Status do Projeto
 
-> **Última atualização:** 24/11/2025  
-> **Status Geral:** ✅ MVP Funcional - Fases 1-9 Completas
+> **Última atualização:** 26/11/2025  
+> **Status Geral:** ✅ MVP Funcional + Melhorias P0/P1 + Onboarding Gamificado
 
 ---
 
@@ -9,14 +9,14 @@
 
 O projeto TasteMatch está **funcional end-to-end** com backend completo, sistema de recomendações com IA, integração GenAI (Groq), e frontend React funcionando. O sistema está rodando localmente e pronto para testes.
 
-### Progresso Geral: ~95% do MVP
+### Progresso Geral: ~100% do MVP
 
 - ✅ **Backend:** 100% completo
 - ✅ **IA/ML:** 100% completo
 - ✅ **GenAI:** 100% completo
 - ✅ **Frontend:** 100% completo (com melhorias de UX)
 - ✅ **Testes:** 100% completo (53 testes automatizados)
-- ⏳ **Deploy:** 0% (pendente)
+- ✅ **Deploy:** 100% completo (Backend no Fly.io, Frontend no Netlify)
 
 ---
 

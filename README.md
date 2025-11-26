@@ -23,6 +23,7 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 
 ### Principais recursos de demonstração
 
+- **Onboarding Gamificado**: novo usuário cria seu perfil de sabor em 3 etapas (culinárias, preço, restrições), gerando vetor sintético para recomendações personalizadas desde o primeiro acesso
 - **Modo Demonstração**: ativa um fluxo guiado para simular pedidos sem impactar dados reais
 - **Chef Recomenda**: card hero que destaca a recomendação principal do usuário, com explicação em linguagem natural
 - **Raciocínio do Chef**: modal com explicação detalhada do porquê daquela escolha, baseada no perfil do usuário
@@ -31,7 +32,7 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 
 ### Status do Projeto
 
-**Progresso:** ~95% do MVP completo
+**Progresso:** ~100% do MVP completo + Melhorias P0/P1 + Onboarding Gamificado
 
 - ✅ **Backend:** 100% completo (FastAPI, autenticação, CRUD, recomendações, GenAI)
 - ✅ **IA/ML:** 100% completo (embeddings, algoritmo de recomendação)
@@ -181,11 +182,11 @@ Após executar o seed, você pode usar estas credenciais:
 
 ### Documentos Principais
 
-- **[SPEC.md](./SPEC.md)** - Especificação técnica completa
-- **[RESUMO_DEPLOY_FINAL.md](./RESUMO_DEPLOY_FINAL.md)** - Resumo do deploy em produção
-- **[DEPLOY.md](./DEPLOY.md)** - Guia completo de deploy
-- **[VALIDACAO_PRODUCAO.md](./VALIDACAO_PRODUCAO.md)** - Validação de endpoints em produção
-- **[plano-de-acao.md](./plano-de-acao.md)** - Plano de desenvolvimento detalhado
+- **[SPEC.md](./Docs/SPEC.md)** - Especificação técnica completa
+- **[RESUMO_DEPLOY_FINAL.md](./Docs/RESUMO_DEPLOY_FINAL.md)** - Resumo do deploy em produção
+- **[DEPLOY.md](./Docs/DEPLOY.md)** - Guia completo de deploy
+- **[VALIDACAO_PRODUCAO.md](./Docs/VALIDACAO_PRODUCAO.md)** - Validação de endpoints em produção
+- **[plano-de-acao.md](./Docs/plano-de-acao.md)** - Plano de desenvolvimento detalhado
 
 ### Endpoints Principais da API
 
@@ -208,6 +209,9 @@ Após executar o seed, você pode usar estas credenciais:
 **Usuário:**
 - `GET /api/users/me` - Informações do usuário autenticado
 - `GET /api/users/me/preferences` - Preferências agregadas
+
+**Onboarding:**
+- `POST /api/onboarding/complete` - Completar onboarding e gerar perfil de sabor (vetor sintético)
 
 **Monitoramento:**
 - `GET /health` - Health check da aplicação
@@ -255,12 +259,12 @@ tastematch/
 │   │   └── App.tsx              # Componente principal
 │   └── package.json
 ├── data/                        # Dados de exemplo
-├── docs/                        # Documentação adicional
+├── Docs/                        # Documentação adicional (especificações, deploy, análises)
 ├── .env.example                 # Template de variáveis
 ├── requirements.txt             # Dependências Python
-├── SPEC.md                      # Especificação técnica
-├── plano-de-acao.md             # Plano de desenvolvimento
-├── STATUS_PROJETO.md            # Status atual
+├── Docs/SPEC.md                 # Especificação técnica
+├── Docs/plano-de-acao.md        # Plano de desenvolvimento
+├── Docs/STATUS_PROJETO.md       # Status atual
 └── README.md                    # Este arquivo
 ```
 
@@ -422,9 +426,9 @@ pytest tests/  # Quando implementado
 - ✅ Variáveis de ambiente configuradas
 
 **Para detalhes completos do deploy, consulte:**
-- [RESUMO_DEPLOY_FINAL.md](./RESUMO_DEPLOY_FINAL.md) - Resumo completo do deploy
-- [DEPLOY.md](./DEPLOY.md) - Guia completo de deploy
-- [VALIDACAO_PRODUCAO.md](./VALIDACAO_PRODUCAO.md) - Validação de endpoints em produção
+- [RESUMO_DEPLOY_FINAL.md](./Docs/RESUMO_DEPLOY_FINAL.md) - Resumo completo do deploy
+- [DEPLOY.md](./Docs/DEPLOY.md) - Guia completo de deploy
+- [VALIDACAO_PRODUCAO.md](./Docs/VALIDACAO_PRODUCAO.md) - Validação de endpoints em produção
 
 ### Como Fazer Deploy (Para Referência)
 

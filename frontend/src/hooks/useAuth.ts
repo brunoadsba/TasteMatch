@@ -64,7 +64,8 @@ export function useAuth(): UseAuthReturn {
       toast.success('Conta criada com sucesso!', {
         description: `Bem-vindo ao TasteMatch, ${user.name}!`,
       });
-      navigate('/dashboard');
+      // Redirecionar para onboarding após cadastro
+      navigate('/onboarding');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao criar conta';
       toast.error('Falha ao criar conta', {

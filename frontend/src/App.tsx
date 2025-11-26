@@ -3,6 +3,7 @@ import { Toaster } from 'sonner';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Orders } from './pages/Orders';
+import { Onboarding } from './pages/Onboarding';
 import { ProtectedRoute } from './components/features/ProtectedRoute';
 import { AIReasoningProvider } from './contexts/AIReasoningContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -27,6 +28,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Orders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute>
+                  <Onboarding />
                 </ProtectedRoute>
               }
             />

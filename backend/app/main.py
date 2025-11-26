@@ -25,7 +25,7 @@ if settings.is_production:
         raise
 
 # Importar routers
-from app.api.routes import auth, users, restaurants, orders, recommendations
+from app.api.routes import auth, users, restaurants, orders, recommendations, onboarding
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -138,6 +138,7 @@ app.include_router(users.router)
 app.include_router(restaurants.router)
 app.include_router(orders.router)
 app.include_router(recommendations.router)
+app.include_router(onboarding.router)
 
 
 if __name__ == "__main__":

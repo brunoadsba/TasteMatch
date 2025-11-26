@@ -14,6 +14,7 @@ import { useAIReasoning } from '@/hooks/useAIReasoning';
 import { AIReasoningLogComponent } from './AIReasoningLog';
 import { SIMULATION_SCENARIOS, type SimulationScenario } from '@/data/simulationScenarios';
 import { Loader2, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface OrderSimulatorProps {
   open: boolean;
@@ -35,6 +36,9 @@ export function OrderSimulator({ open, onOpenChange, onComplete, onOrderCreated 
     },
     () => {
       // Callback de conclusão
+      toast.success('Simulação concluída!', {
+        description: 'Seus pedidos foram processados e o perfil foi atualizado.',
+      });
       if (onComplete) {
         onComplete();
       }
@@ -45,6 +49,10 @@ export function OrderSimulator({ open, onOpenChange, onComplete, onOrderCreated 
     },
     () => {
       // Callback quando um pedido é criado - atualizar painel dinamicamente
+      toast.success('Pedido simulado criado!', {
+        description: 'O sistema está atualizando suas recomendações...',
+        duration: 2000,
+      });
       if (onOrderCreated) {
         onOrderCreated();
       }
@@ -82,11 +90,19 @@ export function OrderSimulator({ open, onOpenChange, onComplete, onOrderCreated 
     const success = await runCustomOrder(orderData);
     
     if (success) {
+      toast.success('Pedido manual criado!', {
+        description: 'O sistema está atualizando suas recomendações...',
+        duration: 2000,
+      });
       setManualForm({
         restaurant_id: '',
         total_amount: '',
         rating: '5',
         items: '',
+      });
+    } else {
+      toast.error('Erro ao criar pedido', {
+        description: 'Verifique os dados e tente novamente.',
       });
     }
   };
@@ -114,7 +130,7 @@ export function OrderSimulator({ open, onOpenChange, onComplete, onOrderCreated 
         </DialogHeader>
 
         {/* Tabs */}
-        <div className="flex gap-2 border-b mb-6">
+        <div className="flex gap-2 border-b mb-6" role="tablist">
           <button
             onClick={() => setActiveTab('quick')}
             className={`px-4 py-2 font-medium transition-colors ${
@@ -122,6 +138,10 @@ export function OrderSimulator({ open, onOpenChange, onComplete, onOrderCreated 
                 ? 'border-b-2 border-blue-500 text-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
+            role="tab"
+            aria-selected={activeTab === 'quick'}
+            aria-controls="quick-personas-panel"
+            id="quick-personas-tab"
           >
             Quick Personas
           </button>
@@ -132,6 +152,10 @@ export function OrderSimulator({ open, onOpenChange, onComplete, onOrderCreated 
                 ? 'border-b-2 border-blue-500 text-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
+            role="tab"
+            aria-selected={activeTab === 'manual'}
+            aria-controls="manual-options-panel"
+            id="manual-options-tab"
           >
             Opções Avançadas
           </button>
@@ -139,24 +163,34 @@ export function OrderSimulator({ open, onOpenChange, onComplete, onOrderCreated 
 
         {/* Conteúdo das Tabs */}
         {activeTab === 'quick' ? (
-          <div className="space-y-4">
+          <div className="space-y-4" role="tabpanel" id="quick-personas-panel" aria-labelledby="quick-personas-tab">
             <div>
               <p className="text-sm text-gray-600 mb-4">
                 Escolha um perfil de usuário para simular múltiplos pedidos instantaneamente:
               </p>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4" role="group" aria-label="Perfis de usuário para simulação">
                 {SIMULATION_SCENARIOS.map((scenario) => (
                   <Card
                     key={scenario.id}
                     className={`cursor-pointer transition-all hover:shadow-lg ${getColorClasses(scenario.color)}`}
                     onClick={() => !isRunning && handleQuickPersona(scenario)}
+                    role="button"
+                    tabIndex={isRunning ? -1 : 0}
+                    aria-label={`Simular pedidos para perfil ${scenario.name}: ${scenario.description}`}
+                    aria-disabled={isRunning}
+                    onKeyDown={(e) => {
+                      if ((e.key === 'Enter' || e.key === ' ') && !isRunning) {
+                        e.preventDefault();
+                        handleQuickPersona(scenario);
+                      }
+                    }}
                   >
                     <CardHeader>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-4xl">{scenario.icon}</span>
+                        <span className="text-4xl" aria-hidden="true">{scenario.icon}</span>
                         {isRunning && currentScenarioId === scenario.id && (
-                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <Loader2 className="w-5 h-5 animate-spin" aria-label="Processando simulação" />
                         )}
                       </div>
                       <CardTitle className="text-lg">{scenario.name}</CardTitle>
@@ -201,40 +235,46 @@ export function OrderSimulator({ open, onOpenChange, onComplete, onOrderCreated 
             )}
           </div>
         ) : (
-          <form onSubmit={handleManualSubmit} className="space-y-4">
+          <form onSubmit={handleManualSubmit} className="space-y-4" role="tabpanel" id="manual-options-panel" aria-labelledby="manual-options-tab">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="restaurant_id" className="block text-sm font-medium text-gray-700 mb-1">
                 ID do Restaurante *
               </label>
               <Input
+                id="restaurant_id"
                 type="number"
                 value={manualForm.restaurant_id}
                 onChange={(e) => setManualForm({ ...manualForm, restaurant_id: e.target.value })}
                 placeholder="Ex: 1"
                 required
                 disabled={isRunning}
+                aria-label="ID do restaurante"
+                aria-required="true"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="total_amount" className="block text-sm font-medium text-gray-700 mb-1">
                 Valor Total (R$)
               </label>
               <Input
+                id="total_amount"
                 type="number"
                 step="0.01"
                 value={manualForm.total_amount}
                 onChange={(e) => setManualForm({ ...manualForm, total_amount: e.target.value })}
                 placeholder="Ex: 45.90"
                 disabled={isRunning}
+                aria-label="Valor total do pedido em reais"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="rating" className="block text-sm font-medium text-gray-700 mb-1">
                 Avaliação (1-5)
               </label>
               <Input
+                id="rating"
                 type="number"
                 min="1"
                 max="5"
@@ -242,19 +282,23 @@ export function OrderSimulator({ open, onOpenChange, onComplete, onOrderCreated 
                 onChange={(e) => setManualForm({ ...manualForm, rating: e.target.value })}
                 required
                 disabled={isRunning}
+                aria-label="Avaliação do pedido de 1 a 5"
+                aria-required="true"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="items" className="block text-sm font-medium text-gray-700 mb-1">
                 Itens (separados por vírgula)
               </label>
               <Input
+                id="items"
                 type="text"
                 value={manualForm.items}
                 onChange={(e) => setManualForm({ ...manualForm, items: e.target.value })}
                 placeholder="Ex: Pizza, Refrigerante, Batata"
                 disabled={isRunning}
+                aria-label="Itens do pedido separados por vírgula"
               />
             </div>
 

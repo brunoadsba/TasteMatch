@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Brain, Sparkles } from 'lucide-react';
 import { useOrders } from '@/hooks/useOrders';
 import { useRecommendations } from '@/hooks/useRecommendations';
@@ -10,9 +11,11 @@ interface LLMInsightPanelProps {
 }
 
 export function LLMInsightPanel({ className, refreshTrigger }: LLMInsightPanelProps) {
-  const { orders, refresh: refreshOrders } = useOrders({ limit: 100, autoFetch: true });
-  const { recommendations, refresh: refreshRecommendations } = useRecommendations(1); // Pega apenas a primeira recomendação para análise
+  const { orders, refresh: refreshOrders, loading: ordersLoading } = useOrders({ limit: 100, autoFetch: true });
+  const { recommendations, refresh: refreshRecommendations, loading: recommendationsLoading } = useRecommendations(1); // Pega apenas a primeira recomendação para análise
   const previousRefreshTrigger = useRef(refreshTrigger);
+  
+  const isLoading = ordersLoading || recommendationsLoading;
 
   // Atualizar pedidos quando refreshTrigger mudar
   useEffect(() => {
@@ -79,6 +82,24 @@ export function LLMInsightPanel({ className, refreshTrigger }: LLMInsightPanelPr
   };
 
   const insight = analyzePreferences();
+
+  // Loading state com Skeleton
+  if (isLoading && orders.length === 0) {
+    return (
+      <Card className={className}>
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-slate-900 dark:to-indigo-900 border-b border-border">
+          <Skeleton className="h-6 w-48" />
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-24 w-full rounded-lg" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className={className}>

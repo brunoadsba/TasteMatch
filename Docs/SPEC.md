@@ -689,6 +689,48 @@ Authorization: Bearer <token>
 
 ---
 
+#### GET /api/recommendations/chef-choice
+
+Obtém a recomendação única do Chef para o usuário autenticado, escolhida a partir do top 3 de restaurantes recomendados.
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+- `refresh` (opcional, padrão: false): Se `true`, força recálculo das recomendações antes da escolha do Chef
+
+**Response (200 OK):**
+```json
+{
+  "restaurant": {
+    "id": 5,
+    "name": "Pizzaria Bella",
+    "cuisine_type": "italiana",
+    "description": "Pizzas artesanais",
+    "rating": 4.5,
+    "price_range": "medium",
+    "location": "Centro",
+    "created_at": "2025-01-20T10:00:00Z"
+  },
+  "similarity_score": 0.83,
+  "explanation": "Eu escolhi Pizzaria Bella especialmente para você porque você costuma pedir comida italiana bem avaliada e este restaurante tem um histórico excelente de avaliações.",
+  "reasoning": [
+    "Alta similaridade com suas preferências",
+    "Excelente avaliação (4.5/5.0)"
+  ],
+  "confidence": 0.92,
+  "generated_at": "2025-01-27T10:00:00Z"
+}
+```
+
+**Erros:**
+- `401 Unauthorized`: Token inválido ou ausente
+- `404 Not Found`: Não há recomendações suficientes para o usuário
+
+---
+
 ### 5.5 Endpoints de Restaurantes
 
 #### GET /api/restaurants

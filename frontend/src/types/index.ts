@@ -76,6 +76,7 @@ export interface ChefRecommendation {
   explanation: string;
   reasoning: string[];
   confidence: number;
+  has_insight?: boolean; // Indica se a explicação foi gerada por LLM (true) ou é fallback (false)
   generated_at: string;
 }
 
@@ -86,5 +87,17 @@ export interface AuthResponse {
 
 export interface ApiError {
   detail: string;
+}
+
+export interface OnboardingRequest {
+  selected_cuisines: string[];
+  price_preference?: 'low' | 'medium' | 'high';
+  dietary_restrictions?: string[];
+}
+
+export interface OnboardingResponse {
+  success: boolean;
+  message: string;
+  has_synthetic_vector: boolean;
 }
 

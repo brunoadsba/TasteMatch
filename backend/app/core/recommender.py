@@ -266,11 +266,8 @@ def generate_recommendations(
     # 1. Obter pedidos do usuário
     orders = get_user_orders(db, user_id=user_id, skip=0, limit=1000)
     
-    # 2. Cold start: se usuário não tem pedidos, retornar populares
-    if not orders:
-        return get_popular_restaurants(db, limit=limit, min_rating=min_rating)
-    
-    # 3. Verificar cache de preferências (se não for refresh)
+    # 2. Verificar cache de preferências (se não for refresh)
+    # Isso inclui vetor sintético de onboarding se disponível
     user_embedding = None
     if not refresh:
         preferences = get_user_preferences(db, user_id=user_id)
@@ -283,12 +280,22 @@ def generate_recommendations(
             except:
                 pass  # Se erro ao carregar, recalcular
     
-    # 4. Se não há embedding cached, calcular novo
+    # 3. Cold start: se usuário não tem pedidos E não tem vetor sintético, retornar populares
+    if not orders and user_embedding is None:
+        return get_popular_restaurants(db, limit=limit, min_rating=min_rating)
+    
+    # 4. Se não há embedding cached (nem sintético nem calculado), calcular novo baseado em pedidos
     if user_embedding is None:
+        # Se não há pedidos, não podemos calcular embedding baseado em histórico
+        # Neste caso, já retornamos populares acima (linha 272)
+        # Se chegou aqui, há pedidos mas não há embedding cached
+        if not orders:
+            return get_popular_restaurants(db, limit=limit, min_rating=min_rating)
+        
         # Obter todos os restaurantes
         restaurants = get_restaurants(db, skip=0, limit=10000)
         
-        # Calcular embedding do usuário
+        # Calcular embedding do usuário baseado em pedidos
         user_embedding = calculate_user_preference_embedding(
             user_id=user_id,
             orders=orders,

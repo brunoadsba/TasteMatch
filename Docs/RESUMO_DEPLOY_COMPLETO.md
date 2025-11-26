@@ -1,13 +1,15 @@
-# ✅ Resumo Completo - Deploy Sprint 1 e Sprint 2
+# ✅ Resumo Completo - Deploy Sprint 1, Sprint 2 e Sprint 3
 
-**Data:** 25/11/2025  
+**Data:** 26/11/2025  
 **Status:** ✅ **TUDO DEPLOYADO E FUNCIONANDO**
 
 ---
 
 ## 🎉 Resumo Executivo
 
-Todos os componentes do Sprint 1 e Sprint 2 foram desenvolvidos, testados e deployados com sucesso em produção.
+Todos os componentes do Sprint 1, Sprint 2 e Sprint 3 foram desenvolvidos, testados e deployados com sucesso em produção.  
+Em 26/11/2025 foram adicionados os ajustes finais: **Chef Recomenda**, layout vertical do modo demo, **Terminal de Raciocínio refinado** e **tema claro/escuro** no frontend, com backend atualizado para suportar o endpoint `/api/recommendations/chef-choice`.  
+Em 26/11/2025 foi implementado e validado: **Onboarding Gamificado** com geração de vetor sintético para recomendações personalizadas desde o primeiro acesso.
 
 ---
 
@@ -64,6 +66,26 @@ Todos os componentes do Sprint 1 e Sprint 2 foram desenvolvidos, testados e depl
    - Modo Demo com barra azul
    - Grid layout: Panel (3 cols) + Terminal (1 col)
    - Botão Reset integrado
+
+---
+
+### **Sprint 3: Chef Recomenda + Tema**
+
+8. ✅ **Endpoint Chef Recomenda**
+   - `GET /api/recommendations/chef-choice` retornando recomendação única do Chef
+   - Seleção da melhor opção entre o top 3 com algoritmo de scoring
+
+9. ✅ **ChefRecommendationCard + Modal de Raciocínio**
+   - Card hero \"Chef Recomenda\" em destaque no modo demo
+   - Modal \"Raciocínio do Chef\" com explicação completa em linguagem leiga
+
+10. ✅ **Tema Claro/Escuro**
+   - `ThemeContext` com modos `light | dark | system`
+   - Toggle no header do Dashboard
+
+11. ✅ **Reorganização de Documentação**
+   - Documentos principais movidos para pasta `Docs/`
+   - Links atualizados no `README.md`
 
 ---
 
@@ -194,5 +216,52 @@ O sistema está **100% funcional** e pronto para demonstração! 🚀
 
 ---
 
-**Última atualização:** 25/11/2025
+---
+
+## 🚀 Sprint 3: Onboarding Gamificado (26/11/2025)
+
+### Funcionalidades Implementadas
+
+1. ✅ **Onboarding Gamificado**
+   - Página de onboarding com 3 etapas (culinárias, preço, restrições)
+   - Geração de vetor sintético baseado em escolhas do usuário
+   - Recomendações personalizadas desde o primeiro acesso
+
+2. ✅ **Backend**
+   - Endpoint `/api/onboarding/complete` implementado
+   - Serviço `onboarding_service.py` com geração de vetor sintético
+   - Integração com `recommender.py` para usar vetor sintético
+
+3. ✅ **Frontend**
+   - Página de onboarding completa e responsiva
+   - Redirecionamento automático após cadastro
+   - Atualização dinâmica de recomendações após onboarding
+   - Limite de 5 culinárias (alinhado com backend)
+
+4. ✅ **Melhorias e Correções**
+   - Tipos de culinária ajustados (frontend alinhado com banco)
+   - Cálculo de relevância padronizado (`Math.round()`)
+   - Tooltip do Modo Demo melhorado (mais conciso)
+
+### Deploy
+
+**Backend:**
+- ✅ Endpoint `/api/onboarding/complete` disponível
+- ✅ Nenhuma migration necessária
+- ✅ Nenhuma nova variável de ambiente
+
+**Frontend:**
+- ✅ Página `/onboarding` incluída no build
+- ✅ Nenhuma nova dependência
+
+### Validação
+
+- ✅ Testes manuais completos
+- ✅ Fluxo end-to-end funcionando
+- ✅ Recomendações usando vetor sintético
+- ✅ Todas as correções aplicadas
+
+---
+
+**Última atualização:** 26/11/2025
 

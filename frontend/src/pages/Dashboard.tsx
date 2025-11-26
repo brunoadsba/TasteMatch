@@ -9,14 +9,26 @@ import { ChefReasoningModal } from '@/components/features/ChefReasoningModal';
 import { useResetSimulation } from '@/hooks/useResetSimulation';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, LogOut, User, AlertCircle, History, Play, X, RotateCcw } from 'lucide-react';
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { Tooltip } from '@/components/ui/tooltip';
+import { toast } from 'sonner';
 
 export function Dashboard() {
   const { user, logout } = useAuth();
+  const location = useLocation();
   const { recommendations, loading, error, refresh } = useRecommendations(12);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Forçar refresh das recomendações se vier do onboarding
+  useEffect(() => {
+    if (location.state?.refreshRecommendations) {
+      refresh(false); // Refresh sem toast (já tem toast do onboarding)
+      // Limpar state para evitar refresh em navegações futuras
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, refresh]);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [simulatorOpen, setSimulatorOpen] = useState(false);
   const [ordersRefreshTrigger, setOrdersRefreshTrigger] = useState(0); // Trigger para atualizar pedidos
@@ -27,9 +39,16 @@ export function Dashboard() {
     if (confirm('Deseja resetar toda a simulação? Isso removerá todos os pedidos simulados.')) {
       const success = await resetSimulation();
       if (success) {
+        toast.success('Histórico de simulações resetado', {
+          description: 'Todas as simulações foram removidas. Você pode começar novamente.',
+        });
         await refresh();
         // Atualizar trigger para atualizar o painel de pedidos
         setOrdersRefreshTrigger(prev => prev + 1);
+      } else {
+        toast.error('Erro ao resetar simulações', {
+          description: 'Tente novamente em instantes.',
+        });
       }
     }
   };
@@ -78,25 +97,46 @@ export function Dashboard() {
               {/* Toggle Tema Claro/Escuro */}
               <ThemeToggle />
 
-              {/* Toggle Modo Demo */}
-              <Button
-                variant={isDemoMode ? "default" : "outline"}
-                size="sm"
-                onClick={() => setIsDemoMode(!isDemoMode)}
-                className={isDemoMode ? "bg-blue-600 hover:bg-blue-700" : ""}
+              {/* Toggle Modo Demo com Tooltip */}
+              <Tooltip
+                content={
+                  isDemoMode
+                    ? "Clique para sair do modo demo e fazer login"
+                    : "Explore o TasteMatch sem criar conta. Simule pedidos e veja recomendações personalizadas."
+                }
+                side="bottom"
               >
-                {isDemoMode ? (
-                  <>
-                    <X className="w-4 h-4 mr-2" />
-                    Sair do Modo Demo
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4 mr-2" />
-                    Modo Demo
-                  </>
-                )}
-              </Button>
+                <Button
+                  variant={isDemoMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    if (isDemoMode) {
+                      toast.success('Modo demo encerrado', {
+                        description: 'Faça login para continuar usando o TasteMatch.',
+                      });
+                    } else {
+                      toast.info('Modo demo ativado', {
+                        description: 'Explore o TasteMatch sem criar conta. Dados simulados não serão salvos.',
+                      });
+                    }
+                    setIsDemoMode(!isDemoMode);
+                  }}
+                  className={isDemoMode ? "bg-blue-600 hover:bg-blue-700" : ""}
+                  aria-label={isDemoMode ? "Sair do modo demo" : "Ativar modo demo"}
+                >
+                  {isDemoMode ? (
+                    <>
+                      <X className="w-4 h-4 mr-2" />
+                      Sair do Modo Demo
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 mr-2" />
+                      Modo Demo
+                    </>
+                  )}
+                </Button>
+              </Tooltip>
               
               {/* Botão Reset Simulação */}
               {isDemoMode && (

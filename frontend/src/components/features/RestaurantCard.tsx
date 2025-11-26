@@ -64,7 +64,7 @@ export function RestaurantCard({ restaurant, onViewInsight }: RestaurantCardProp
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-500">Relevância:</span>
             <span className="font-medium text-blue-600">
-              {(restaurant.similarity_score * 100).toFixed(0)}%
+              {Math.round(restaurant.similarity_score * 100)}%
             </span>
           </div>
           {restaurant.insight && (
@@ -125,7 +125,7 @@ export function RestaurantCard({ restaurant, onViewInsight }: RestaurantCardProp
                       <div>
                         <span className="text-sm text-muted-foreground">Relevância:</span>
                         <p className="font-medium text-blue-600">
-                          {(restaurant.similarity_score * 100).toFixed(0)}%
+                          {Math.round(restaurant.similarity_score * 100)}%
                         </p>
                       </div>
                     </div>
