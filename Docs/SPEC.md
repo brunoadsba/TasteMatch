@@ -2,7 +2,7 @@
 
 > **Agente de Recomendação Inteligente para Delivery**  
 > Documentação para desenvolvimento colaborativo (Desenvolvedor + IA)  
-> Versão: 1.1.0 | Última atualização: 2025-01-27
+> Versão: 1.2.0 | Última atualização: 2025-11-26
 
 ---
 
@@ -656,12 +656,14 @@ Authorization: Bearer <token>
 - `404 Not Found`: Usuário não encontrado
 
 **Lógica:**
-1. Verifica se há preferências cached do usuário
-2. Se não houver ou `refresh=true`, calcula novo embedding do usuário baseado no histórico
-3. Calcula similaridade com todos os restaurantes
-4. Ordena por similaridade
-5. Gera insights com LLM para top N restaurantes
-6. Retorna recomendações ordenadas
+1. Verifica se há vetor sintético do onboarding (prioridade)
+2. Se não houver, verifica se há preferências cached do usuário
+3. Se não houver ou `refresh=true`, calcula novo embedding do usuário baseado no histórico
+4. Se usuário não tem pedidos e não tem vetor sintético, retorna restaurantes populares (cold start)
+5. Calcula similaridade com todos os restaurantes
+6. Ordena por similaridade
+7. Gera insights com LLM para top N restaurantes
+8. Retorna recomendações ordenadas
 
 ---
 

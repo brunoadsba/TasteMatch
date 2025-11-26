@@ -32,13 +32,14 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 
 ### Status do Projeto
 
-**Progresso:** ~100% do MVP completo + Melhorias P0/P1 + Onboarding Gamificado
+**Progresso:** ~100% do MVP completo + Melhorias P0/P1 + Onboarding Gamificado + Correção de CORS
 
-- ✅ **Backend:** 100% completo (FastAPI, autenticação, CRUD, recomendações, GenAI)
-- ✅ **IA/ML:** 100% completo (embeddings, algoritmo de recomendação)
+- ✅ **Backend:** 100% completo (FastAPI, autenticação, CRUD, recomendações, GenAI, onboarding)
+- ✅ **IA/ML:** 100% completo (embeddings, algoritmo de recomendação, vetor sintético)
 - ✅ **GenAI:** 100% completo (Groq API com retry robusto)
-- ✅ **Frontend:** 100% completo (React + Vite + TypeScript + Shadcn/UI)
-- ✅ **Deploy:** 100% completo (Backend no Fly.io, Frontend no Netlify)
+- ✅ **Frontend:** 100% completo (React + Vite + TypeScript + Shadcn/UI, onboarding)
+- ✅ **Deploy:** 100% completo (Backend no Fly.io v28, Frontend no Netlify)
+- ✅ **CORS:** 100% corrigido (URL da API detecta ambiente automaticamente)
 - ⏳ **Testes:** 20% (testes manuais completos, automatizados pendentes)
 
 ### Tecnologias Principais

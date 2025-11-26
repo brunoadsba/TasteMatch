@@ -1,22 +1,23 @@
 # TasteMatch - Status do Projeto
 
 > **Última atualização:** 26/11/2025  
-> **Status Geral:** ✅ MVP Funcional + Melhorias P0/P1 + Onboarding Gamificado
+> **Status Geral:** ✅ MVP Funcional + Melhorias P0/P1 + Onboarding Gamificado + Deploy em Produção
 
 ---
 
 ## 📊 Resumo Executivo
 
-O projeto TasteMatch está **funcional end-to-end** com backend completo, sistema de recomendações com IA, integração GenAI (Groq), e frontend React funcionando. O sistema está rodando localmente e pronto para testes.
+O projeto TasteMatch está **funcional end-to-end** com backend completo, sistema de recomendações com IA, integração GenAI (Groq), e frontend React funcionando. O sistema está **deployado em produção** (Backend no Fly.io, Frontend no Netlify) e funcionando corretamente após correção de CORS.
 
 ### Progresso Geral: ~100% do MVP
 
-- ✅ **Backend:** 100% completo
-- ✅ **IA/ML:** 100% completo
+- ✅ **Backend:** 100% completo (incluindo onboarding)
+- ✅ **IA/ML:** 100% completo (incluindo vetor sintético)
 - ✅ **GenAI:** 100% completo
-- ✅ **Frontend:** 100% completo (com melhorias de UX)
+- ✅ **Frontend:** 100% completo (incluindo onboarding e correção de CORS)
 - ✅ **Testes:** 100% completo (53 testes automatizados)
-- ✅ **Deploy:** 100% completo (Backend no Fly.io, Frontend no Netlify)
+- ✅ **Deploy:** 100% completo (Backend v28 no Fly.io, Frontend no Netlify)
+- ✅ **CORS:** 100% corrigido (URL da API detecta ambiente automaticamente)
 
 ---
 
@@ -366,6 +367,53 @@ npm run dev
 
 ---
 
-**Última atualização:** 27/01/2025  
-**Status:** ✅ MVP Praticamente Completo (95%) - Pronto para deploy
+---
+
+## 🚀 Sprint 3: Onboarding Gamificado (26/11/2025)
+
+### Funcionalidades Implementadas
+
+1. ✅ **Onboarding Gamificado**
+   - Página de onboarding com 3 etapas (culinárias, preço, restrições)
+   - Geração de vetor sintético baseado em escolhas do usuário
+   - Recomendações personalizadas desde o primeiro acesso
+
+2. ✅ **Backend**
+   - Endpoint `/api/onboarding/complete` implementado
+   - Serviço `onboarding_service.py` com geração de vetor sintético
+   - Integração com `recommender.py` para usar vetor sintético
+
+3. ✅ **Frontend**
+   - Página de onboarding completa e responsiva
+   - Redirecionamento automático após cadastro
+   - Atualização dinâmica de recomendações após onboarding
+
+4. ✅ **Deploy**
+   - Backend deployado (v28) com endpoint de onboarding
+   - Frontend deployado com página de onboarding
+   - CORS corrigido (URL da API detecta ambiente automaticamente)
+
+---
+
+## 🔧 Sprint 4: Correção de CORS (26/11/2025)
+
+### Problema Identificado
+- ❌ Erros de CORS no console do navegador
+- ❌ Frontend em produção usando `localhost:8000` como URL da API
+
+### Solução Aplicada
+- ✅ URL da API agora detecta ambiente automaticamente
+- ✅ Em produção: usa `https://tastematch-api.fly.dev`
+- ✅ Em desenvolvimento: usa `http://localhost:8000`
+
+### Status
+- ✅ Código corrigido
+- ✅ Build concluído
+- ✅ Deploy realizado
+- ✅ CORS funcionando em produção
+
+---
+
+**Última atualização:** 26/11/2025  
+**Status:** ✅ MVP Completo + Onboarding + Deploy em Produção
 
