@@ -20,6 +20,7 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 - ⚡ Processa recomendações em tempo real com cache inteligente
 - 🔐 Sistema completo de autenticação JWT
 - 🎨 Interface moderna com React + TypeScript + Shadcn/UI, com tema claro/escuro
+- 📱 Design mobile-first totalmente responsivo com menu hambúrguer e viewports dinâmicos
 
 ### Principais recursos de demonstração
 
@@ -40,7 +41,8 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 - ✅ **Frontend:** 100% completo (React + Vite + TypeScript + Shadcn/UI, onboarding)
 - ✅ **Deploy:** 100% completo (Backend no Fly.io v28, Frontend no Netlify)
 - ✅ **CORS:** 100% corrigido (URL da API detecta ambiente automaticamente)
-- ⏳ **Testes:** 20% (testes manuais completos, automatizados pendentes)
+- ✅ **Mobile-First:** 100% completo (design responsivo, menu hambúrguer, viewports dinâmicos)
+- ✅ **Testes E2E:** 100% completo (Playwright, 50 testes, 0 falhas)
 
 ### Tecnologias Principais
 

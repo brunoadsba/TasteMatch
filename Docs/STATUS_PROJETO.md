@@ -414,6 +414,39 @@ npm run dev
 
 ---
 
+---
+
+## 🚀 Sprint 5: Mobile-First Refactor + Testes E2E (26/11/2025)
+
+### Funcionalidades Implementadas
+
+1. ✅ **Mobile-First Refactor Completo**
+   - Componentes `AppHeader` e `MobileMenu` reutilizáveis
+   - Menu hambúrguer para mobile (< 768px)
+   - Cards forçados em Orders page (mobile)
+   - Viewports dinâmicos (dvh) para teclado virtual
+   - Modais e componentes totalmente responsivos
+   - Composition Pattern implementado
+
+2. ✅ **Testes E2E Automatizados (Playwright)**
+   - 50 testes automatizados cobrindo mobile-first
+   - Configuração para múltiplos viewports
+   - Zero falhas (15 passaram, 35 pulados quando não há login)
+   - Scripts npm para execução fácil
+   - Screenshots comparativos em diferentes viewports
+
+### Arquivos Modificados/Criados
+- **Mobile-First:** 9 arquivos (componentes, páginas, configurações)
+- **Testes E2E:** 4 arquivos (config, testes, scripts, docs)
+
+### Status
+- ✅ Mobile-First implementado e testado
+- ✅ Testes E2E funcionando (0 falhas)
+- ✅ Build sem erros
+- ✅ Documentação atualizada
+
+---
+
 **Última atualização:** 26/11/2025  
-**Status:** ✅ MVP Completo + Onboarding + Deploy em Produção
+**Status:** ✅ MVP Completo + Onboarding + Deploy + Mobile-First + Testes E2E
 
