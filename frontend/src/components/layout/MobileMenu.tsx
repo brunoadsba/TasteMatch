@@ -5,8 +5,8 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from '@/components/ui/sheet';
-import { cn } from '@/lib/utils';
 
 interface MobileMenuProps {
   open: boolean;
@@ -17,9 +17,20 @@ interface MobileMenuProps {
     label?: string;
     items: ReactNode;
   }>;
+  onCloseMenu?: () => void; // Função para fechar menu programaticamente
 }
 
-export function MobileMenu({ open, onOpenChange, title, children, sections }: MobileMenuProps) {
+export function MobileMenu({ open, onOpenChange, title, children, sections, onCloseMenu }: MobileMenuProps) {
+  // Expor função de fechar menu via contexto ou prop
+  useEffect(() => {
+    if (onCloseMenu) {
+      // Armazenar função globalmente para ser acessada pelos botões
+      (window as any).__closeMobileMenu = onCloseMenu;
+      return () => {
+        delete (window as any).__closeMobileMenu;
+      };
+    }
+  }, [onCloseMenu]);
   // Overscroll Behavior: Prevenir scroll da página de fundo quando menu está aberto
   useEffect(() => {
     if (open) {
@@ -41,6 +52,9 @@ export function MobileMenu({ open, onOpenChange, title, children, sections }: Mo
         {title && (
           <SheetHeader>
             <SheetTitle>{title}</SheetTitle>
+            <SheetDescription className="sr-only">
+              Menu de navegação e configurações
+            </SheetDescription>
           </SheetHeader>
         )}
         

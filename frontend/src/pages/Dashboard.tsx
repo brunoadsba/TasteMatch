@@ -10,7 +10,7 @@ import { useResetSimulation } from '@/hooks/useResetSimulation';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, LogOut, User, AlertCircle, History, Play, X, RotateCcw } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { toast } from 'sonner';
 import { AppHeader } from '@/components/layout';
@@ -18,6 +18,7 @@ import { AppHeader } from '@/components/layout';
 export function Dashboard() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const { recommendations, loading, error, refresh } = useRecommendations(12);
   const [refreshing, setRefreshing] = useState(false);
   
@@ -89,6 +90,10 @@ export function Dashboard() {
             <span>Modo Demo Ativo</span>
           ) : undefined
         }
+        onMobileMenuClose={() => {
+          // Fechar menu e redirecionar para dashboard
+          navigate('/dashboard', { replace: true });
+        }}
         mobileMenuSections={[
           // Seção 1: Modo Demo
           {
@@ -98,7 +103,13 @@ export function Dashboard() {
                 <Button
                   variant={isDemoMode ? "default" : "outline"}
                   size="sm"
-                  onClick={() => {
+                  onClick={async () => {
+                    // Fechar menu mobile primeiro
+                    const closeMenu = (window as any).__closeMobileMenu;
+                    if (closeMenu) {
+                      closeMenu();
+                    }
+                    
                     if (isDemoMode) {
                       localStorage.removeItem('demo-banner-dismissed');
                       toast.success('Modo demo encerrado', {
@@ -112,6 +123,13 @@ export function Dashboard() {
                       });
                     }
                     setIsDemoMode(!isDemoMode);
+                    
+                    // Redirecionar para dashboard após um pequeno delay
+                    setTimeout(() => {
+                      navigate('/dashboard', { replace: true });
+                      // Forçar scroll para o topo
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }, 200);
                   }}
                   className={isDemoMode ? "bg-blue-600 hover:bg-blue-700 text-white" : "w-full"}
                 >

@@ -11,6 +11,11 @@ interface AppHeaderProps {
   children?: ReactNode;
   demoModeBar?: ReactNode; // Barra de Demo Mode opcional
   isDemoMode?: boolean; // Indica se está em modo demo
+  mobileMenuSections?: Array<{
+    label?: string;
+    items: ReactNode;
+  }>; // Seções organizadas para o menu mobile
+  onMobileMenuClose?: () => void; // Callback para fechar menu mobile
   className?: string;
 }
 
@@ -21,6 +26,7 @@ export function AppHeader({
   demoModeBar,
   isDemoMode = false,
   mobileMenuSections,
+  onMobileMenuClose,
   className 
 }: AppHeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -109,9 +115,20 @@ export function AppHeader({
       {/* Mobile Menu */}
       <MobileMenu
         open={mobileMenuOpen}
-        onOpenChange={setMobileMenuOpen}
+        onOpenChange={(open) => {
+          setMobileMenuOpen(open);
+          if (!open && onMobileMenuClose) {
+            // Pequeno delay para garantir que ações do menu sejam executadas primeiro
+            setTimeout(() => {
+              onMobileMenuClose();
+            }, 100);
+          }
+        }}
         title={title}
         sections={mobileMenuSections}
+        onCloseMenu={() => {
+          setMobileMenuOpen(false);
+        }}
       >
         {children}
       </MobileMenu>
