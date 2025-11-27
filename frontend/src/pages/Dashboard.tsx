@@ -12,7 +12,6 @@ import { RefreshCw, LogOut, User, AlertCircle, History, Play, X, RotateCcw } fro
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { Tooltip } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { AppHeader } from '@/components/layout';
 
@@ -84,55 +83,135 @@ export function Dashboard() {
       <AppHeader
         title="TasteMatch"
         subtitle="Recomendações personalizadas para você"
+        isDemoMode={isDemoMode}
         demoModeBar={
           isDemoMode ? (
-            <span>🎯 Modo Demonstração Ativo - Dados simulados não serão salvos permanentemente</span>
+            <span>Modo Demo Ativo</span>
           ) : undefined
         }
+        mobileMenuSections={[
+          // Seção 1: Modo Demo
+          {
+            label: isDemoMode ? 'Modo Demo' : undefined,
+            items: (
+              <>
+                <Button
+                  variant={isDemoMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    if (isDemoMode) {
+                      localStorage.removeItem('demo-banner-dismissed');
+                      toast.success('Modo demo encerrado', {
+                        description: 'Faça login para continuar usando o TasteMatch.',
+                        duration: 3000,
+                      });
+                    } else {
+                      toast.info('Modo demo ativado', {
+                        description: 'Explore o TasteMatch. Dados simulados não serão salvos.',
+                        duration: 4000,
+                      });
+                    }
+                    setIsDemoMode(!isDemoMode);
+                  }}
+                  className={isDemoMode ? "bg-blue-600 hover:bg-blue-700 text-white" : "w-full"}
+                >
+                  {isDemoMode ? (
+                    <>
+                      <X className="w-4 h-4 mr-2" />
+                      Sair do Modo Demo
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 mr-2" />
+                      Ativar Modo Demo
+                    </>
+                  )}
+                </Button>
+                {isDemoMode && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResetSimulation}
+                    disabled={resetting}
+                    className="text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-950"
+                  >
+                    <RotateCcw className={`w-4 h-4 mr-2 ${resetting ? 'animate-spin' : ''}`} />
+                    Resetar Simulação
+                  </Button>
+                )}
+              </>
+            ),
+          },
+          // Seção 2: Navegação
+          {
+            label: 'Navegação',
+            items: (
+              <Link to="/orders" className="w-full">
+                <Button variant="outline" size="sm" className="w-full">
+                  <History className="w-4 h-4 mr-2" />
+                  Histórico de Pedidos
+                </Button>
+              </Link>
+            ),
+          },
+          // Seção 3: Conta
+          {
+            label: 'Conta',
+            items: (
+              <>
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 px-3 py-2">
+                  <User className="w-4 h-4" />
+                  <span>{user?.name}</span>
+                </div>
+                <Button variant="outline" onClick={logout} size="sm" className="w-full">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sair
+                </Button>
+              </>
+            ),
+          },
+        ]}
       >
         {/* Toggle Tema Claro/Escuro */}
         <ThemeToggle />
 
-        {/* Toggle Modo Demo com Tooltip */}
-        <Tooltip
-          content={
-            isDemoMode
-              ? "Clique para sair do modo demo e fazer login"
-              : "Explore o TasteMatch. Simule pedidos e veja recomendações personalizadas."
-          }
-          side="bottom"
+        {/* Toggle Modo Demo - Sem Tooltip (melhor para mobile) */}
+        <Button
+          variant={isDemoMode ? "default" : "outline"}
+          size="sm"
+          onClick={() => {
+            if (isDemoMode) {
+              // Resetar banner dismissed ao sair do modo demo
+              localStorage.removeItem('demo-banner-dismissed');
+              toast.success('Modo demo encerrado', {
+                description: 'Faça login para continuar usando o TasteMatch.',
+                duration: 3000,
+              });
+            } else {
+              toast.info('Modo demo ativado', {
+                description: 'Explore o TasteMatch. Dados simulados não serão salvos.',
+                duration: 4000,
+              });
+            }
+            setIsDemoMode(!isDemoMode);
+          }}
+          className={isDemoMode ? "bg-blue-600 hover:bg-blue-700" : ""}
+          aria-label={isDemoMode ? "Sair do modo demo" : "Ativar modo demo"}
         >
-          <Button
-            variant={isDemoMode ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              if (isDemoMode) {
-                toast.success('Modo demo encerrado', {
-                  description: 'Faça login para continuar usando o TasteMatch.',
-                });
-              } else {
-                toast.info('Modo demo ativado', {
-                  description: 'Explore o TasteMatch. Dados simulados não serão salvos.',
-                });
-              }
-              setIsDemoMode(!isDemoMode);
-            }}
-            className={isDemoMode ? "bg-blue-600 hover:bg-blue-700" : ""}
-            aria-label={isDemoMode ? "Sair do modo demo" : "Ativar modo demo"}
-          >
-            {isDemoMode ? (
-              <>
-                <X className="w-4 h-4 mr-2" />
-                Sair do Modo Demo
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4 mr-2" />
-                Modo Demo
-              </>
-            )}
-          </Button>
-        </Tooltip>
+          {isDemoMode ? (
+            <>
+              <X className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Sair do Modo Demo</span>
+              <span className="sm:hidden">Sair Demo</span>
+            </>
+          ) : (
+            <>
+              <Play className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Modo Demo</span>
+              <span className="sm:hidden">Demo</span>
+            </>
+          )}
+        </Button>
         
         {/* Botão Reset Simulação */}
         {isDemoMode && (
