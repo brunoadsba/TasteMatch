@@ -528,6 +528,42 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ||
 
 ---
 
+### Problema: Deploy travado no Netlify
+
+**Erro:** Deploy iniciado mas fica em "Deploy in progress" indefinidamente, sem concluir.
+
+**Causa:**
+- Deploy manual pode entrar em conflito com auto-deploy
+- Branch de feature pode não estar configurada para auto-deploy
+- Processo de build pode estar travado internamente
+- CLI do Netlify pode não retornar output quando há problemas
+
+**Solução:**
+1. **Cancelar deploys travados** - No dashboard do Netlify, cancelar todos os deploys em progresso
+2. **Verificar build local primeiro** - Sempre rodar `npm run build` localmente antes de deployar
+3. **Fazer deploy direto** - Usar `netlify deploy --prod --dir=frontend/dist` com build já compilado
+4. **Alternativa: Merge para main** - Se auto-deploy estiver configurado apenas para main, fazer merge e deixar o Netlify fazer deploy automaticamente
+
+**Processo recomendado:**
+```bash
+# 1. Build local primeiro
+cd frontend && npm run build
+
+# 2. Verificar que build foi bem-sucedido
+ls -la dist/
+
+# 3. Deploy direto do diretório dist
+cd .. && netlify deploy --prod --dir=frontend/dist
+```
+
+**Lição:** 
+- Sempre cancelar deploys travados antes de tentar novo deploy
+- Build local antes de deploy evita problemas
+- Deploy direto de diretório compilado é mais confiável que deixar Netlify fazer build
+- Dashboard do Netlify é mais confiável que CLI para ver status real
+
+---
+
 ## 📝 Documentação
 
 ### Lição: Atualizar documentação após cada feature
@@ -629,15 +665,81 @@ __all__ = ["auth", "users", "restaurants", "orders", "recommendations", "onboard
 5. **Testar CORS em produção** - Problema comum e fácil de detectar
 6. **Deploy não garante código atualizado** - Sempre validar
 7. **CLI deploy é mais confiável** - Mais controle e visibilidade
-8. **Atualizar documentação junto com código** - Não deixar para depois
-9. **Tooltips devem ser concisos** - Menos é mais
-10. **Padronizar cálculos de display** - Consistência melhora UX
-11. **Importar routers explicitamente** - Verificar sempre
-12. **Validar tipos de dados entre frontend e backend** - Alinhar sempre
+8. **Cancelar deploys travados antes de novo deploy** - Evita conflitos
+9. **Build local antes de deploy** - Economiza tempo e evita problemas
+10. **Deploy direto de diretório compilado** - Mais confiável que build no Netlify
+11. **Atualizar documentação junto com código** - Não deixar para depois
+12. **Tooltips devem ser concisos** - Menos é mais
+13. **Padronizar cálculos de display** - Consistência melhora UX
+14. **Importar routers explicitamente** - Verificar sempre
+15. **Validar tipos de dados entre frontend e backend** - Alinhar sempre
 
 ---
 
-**Última atualização:** 26/11/2025  
+---
+
+## 🎨 UX Mobile e Acessibilidade
+
+### Problema: Menu mobile não fecha após ação
+
+**Problema:** Usuário clica em "Ativar/Desativar Modo Demo" no menu mobile, mas o menu permanece aberto após a ação.
+
+**Causa:** Menu mobile (Sheet) não estava sendo fechado programaticamente após mudança de estado.
+
+**Solução:**
+1. Expor função global `window.__closeMobileMenu()` no componente `MobileMenu`
+2. Chamar função antes de atualizar estado no `Dashboard`
+3. Adicionar redirecionamento e scroll para topo após ação
+4. Usar `setTimeout` para garantir que menu fecha antes da navegação
+
+**Implementação:**
+```typescript
+// MobileMenu.tsx
+useEffect(() => {
+  if (open) {
+    (window as any).__closeMobileMenu = () => setOpen(false);
+  }
+}, [open]);
+
+// Dashboard.tsx
+const handleDemoModeToggle = () => {
+  (window as any).__closeMobileMenu?.();
+  setIsDemoMode(!isDemoMode);
+  setTimeout(() => {
+    navigate('/dashboard', { replace: true });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 100);
+};
+```
+
+**Lição:** Componentes de UI devem permitir controle programático. Sempre expor funções de controle quando necessário.
+
+---
+
+### Problema: Avisos de acessibilidade no console
+
+**Erro:**
+```
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}
+```
+
+**Causa:** Radix UI Dialog (usado pelo Sheet) requer `DialogDescription` ou `aria-describedby` para acessibilidade.
+
+**Solução:** Adicionar `SheetDescription` com classe `sr-only` (screen reader only):
+```tsx
+<SheetDescription className="sr-only">
+  Menu de navegação mobile
+</SheetDescription>
+```
+
+**Lição:** 
+- Sempre verificar avisos de acessibilidade no console
+- Componentes de diálogo precisam de descrição para leitores de tela
+- Classe `sr-only` oculta visualmente mas mantém acessibilidade
+
+---
+
+**Última atualização:** 27/11/2025  
 **Projeto:** TasteMatch - Agente de Recomendação Inteligente  
-**Fase:** 13 - Onboarding Gamificado + Correção de CORS ✅
+**Fase:** 14 - Melhorias UX Mobile + Correção Acessibilidade ✅
 
