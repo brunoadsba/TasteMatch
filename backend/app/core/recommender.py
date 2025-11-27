@@ -106,15 +106,18 @@ def calculate_user_preference_embedding(
 def extract_user_patterns(
     user_id: int,
     orders: List[Order],
-    restaurants: List[Restaurant]
+    restaurants: List[Any]  # Aceita tanto List[Restaurant] quanto List[Dict]
 ) -> Dict[str, Any]:
     """
     Extrai padrões comportamentais do usuário do histórico de pedidos.
     
+    OTIMIZAÇÃO: Aceita tanto objetos Restaurant quanto dicionários (metadados).
+    Isso permite usar get_restaurants_metadata() que é mais eficiente em memória.
+    
     Args:
         user_id: ID do usuário
         orders: Lista de pedidos do usuário
-        restaurants: Lista de restaurantes
+        restaurants: Lista de restaurantes (objetos Restaurant ou dicionários)
         
     Returns:
         dict: Padrões extraídos (culinárias favoritas, horários, ticket médio, etc.)
@@ -130,8 +133,15 @@ def extract_user_patterns(
     if not orders:
         return patterns
     
-    # Criar dicionário de restaurantes
-    restaurants_dict = {r.id: r for r in restaurants}
+    # Criar dicionário de restaurantes (compatível com objetos e dicionários)
+    restaurants_dict = {}
+    for r in restaurants:
+        if isinstance(r, dict):
+            # Se for dicionário (metadados), usar diretamente
+            restaurants_dict[r['id']] = r
+        else:
+            # Se for objeto Restaurant, usar diretamente
+            restaurants_dict[r.id] = r
     
     # Culinárias favoritas (top 3)
     cuisine_counts = Counter()
@@ -143,7 +153,10 @@ def extract_user_patterns(
     for order in orders:
         restaurant = restaurants_dict.get(order.restaurant_id)
         if restaurant:
-            cuisine_counts[restaurant.cuisine_type] += 1
+            # Compatível com objeto Restaurant ou dicionário
+            cuisine_type = restaurant.cuisine_type if hasattr(restaurant, 'cuisine_type') else restaurant.get('cuisine_type')
+            if cuisine_type:
+                cuisine_counts[cuisine_type] += 1
         
         # Contar por dia da semana
         day_counts[order.order_date.weekday()] += 1

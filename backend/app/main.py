@@ -62,6 +62,32 @@ async def log_requests(request: Request, call_next):
     
     return response
 
+
+# Middleware para adicionar headers HTTP Cache-Control
+@app.middleware("http")
+async def add_cache_headers(request: Request, call_next):
+    """
+    Middleware para adicionar headers de cache HTTP.
+    
+    OTIMIZAÇÃO: Reduz requisições ao backend permitindo que clientes/CDN façam cache.
+    - Restaurantes: cache público de 5 minutos (dados mais estáticos)
+    - Recomendações: cache privado de 10 minutos (dados personalizados)
+    """
+    response = await call_next(request)
+    
+    # Aplicar cache apenas para requisições GET bem-sucedidas
+    if request.method == "GET" and response.status_code == 200:
+        path = str(request.url.path)
+        
+        if "/api/restaurants" in path:
+            # Restaurantes: dados mais estáticos, cache público
+            response.headers["Cache-Control"] = "public, max-age=300"  # 5 minutos
+        elif "/api/recommendations" in path:
+            # Recomendações: dados personalizados, cache privado
+            response.headers["Cache-Control"] = "private, max-age=600"  # 10 minutos
+    
+    return response
+
 logger.info("Aplicação FastAPI inicializada", extra={"app_name": settings.APP_NAME, "environment": settings.ENVIRONMENT})
 
 # Configuração CORS
