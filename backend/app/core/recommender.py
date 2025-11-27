@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.database.crud import (
     get_user_orders,
     get_restaurants,
+    get_restaurants_for_similarity,
     get_user_preferences,
     create_or_update_user_preferences
 )
@@ -305,8 +306,13 @@ def generate_recommendations(
         if not orders:
             return get_popular_restaurants(db, limit=limit, min_rating=min_rating)
         
-        # Obter todos os restaurantes
-        restaurants = get_restaurants(db, skip=0, limit=10000)
+        # OTIMIZAÇÃO: Buscar apenas restaurantes que o usuário pediu (não todos)
+        # Reduz drasticamente o uso de memória
+        restaurant_ids = [order.restaurant_id for order in orders]
+        restaurants = get_restaurants_for_similarity(
+            db, 
+            restaurant_ids=restaurant_ids
+        )
         
         # Calcular embedding do usuário baseado em pedidos
         user_embedding = calculate_user_preference_embedding(
@@ -322,7 +328,10 @@ def generate_recommendations(
         
         # Cachear embedding nas preferências do usuário
         try:
-            favorite_cuisines = extract_user_patterns(user_id, orders, restaurants)["favorite_cuisines"]
+            # Para extract_user_patterns, usar metadados (mais leve)
+            from app.core.cache import get_cached_restaurants_metadata
+            restaurants_metadata = get_cached_restaurants_metadata(db, ttl_minutes=60)
+            favorite_cuisines = extract_user_patterns(user_id, orders, restaurants_metadata)["favorite_cuisines"]
             create_or_update_user_preferences(
                 db=db,
                 user_id=user_id,
@@ -333,8 +342,13 @@ def generate_recommendations(
             # Se erro ao salvar cache, continuar (não crítico)
             pass
     
-    # 5. Obter todos os restaurantes para calcular similaridade
-    all_restaurants = get_restaurants(db, skip=0, limit=10000, min_rating=min_rating)
+    # 5. Obter restaurantes para calcular similaridade (apenas campos necessários)
+    # OTIMIZAÇÃO: Busca apenas id, embedding e rating (não todos os campos)
+    all_restaurants = get_restaurants_for_similarity(
+        db, 
+        limit=None,  # Sem limite (mas apenas campos essenciais)
+        min_rating=min_rating
+    )
     
     # 6. IDs de restaurantes pedidos recentemente (para excluir se solicitado)
     recent_restaurant_ids = set()

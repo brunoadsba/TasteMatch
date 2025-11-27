@@ -2,7 +2,7 @@
 Operações CRUD (Create, Read, Update, Delete) para o TasteMatch.
 """
 
-from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy.orm import Session, joinedload, selectinload, load_only
 from sqlalchemy import select
 from typing import Optional, List, Dict, Any
 from app.database.models import User, Restaurant, Order, Recommendation, UserPreferences
@@ -77,6 +77,43 @@ def get_restaurants_metadata(db: Session, limit: Optional[int] = None) -> List[D
     # que iterar sobre objetos ORM
     result = db.execute(stmt).mappings().all()
     return [dict(row) for row in result]
+
+
+def get_restaurants_for_similarity(
+    db: Session, 
+    limit: Optional[int] = None,
+    min_rating: Optional[float] = None,
+    restaurant_ids: Optional[List[int]] = None
+) -> List[Restaurant]:
+    """
+    Busca restaurantes apenas com campos necessários para cálculo de similaridade.
+    
+    OTIMIZAÇÃO: Usa load_only para carregar apenas id, embedding e rating.
+    Reduz significativamente o uso de memória comparado a get_restaurants(limit=10000).
+    
+    Args:
+        db: Sessão do banco de dados
+        limit: Limite opcional de resultados
+        min_rating: Rating mínimo para filtrar
+        restaurant_ids: Lista opcional de IDs específicos (para buscar apenas restaurantes pedidos)
+        
+    Returns:
+        Lista de objetos Restaurant (apenas com id, embedding, rating carregados)
+    """
+    query = db.query(Restaurant).options(
+        load_only(Restaurant.id, Restaurant.embedding, Restaurant.rating, Restaurant.cuisine_type)
+    )
+    
+    if restaurant_ids:
+        query = query.filter(Restaurant.id.in_(restaurant_ids))
+    
+    if min_rating is not None:
+        query = query.filter(Restaurant.rating >= min_rating)
+    
+    if limit:
+        query = query.limit(limit)
+    
+    return query.all()
 
 
 def get_restaurants(
