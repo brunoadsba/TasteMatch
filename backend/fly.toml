@@ -56,5 +56,4 @@ primary_region = 'gru'
 # Habilitar swap (memória virtual em disco)
 # OTIMIZAÇÃO: Se a RAM estourar um pouco, o Linux usa o disco em vez de matar o processo
 # Para o usuário, lentidão é melhor que erro 500 (OOM)
-[swap_size_mb]
-  size = 512
+swap_size_mb = 512
