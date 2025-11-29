@@ -9,6 +9,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -19,37 +20,14 @@ COPY requirements.txt .
 # PyTorch CPU é suficiente para embeddings (não precisa de GPU em produção)
 RUN pip install --no-cache-dir torch==2.1.2+cpu --index-url https://download.pytorch.org/whl/cpu
 
-# Instalar dependências leves primeiro (sem torch, que já foi instalado)
-RUN pip install --no-cache-dir \
-    fastapi==0.104.1 \
-    uvicorn[standard]==0.24.0 \
-    pydantic==2.5.0 \
-    pydantic-settings==2.1.0 \
-    email-validator==2.3.0 \
-    sqlalchemy==2.0.23 \
-    alembic==1.12.1 \
-    psycopg2-binary==2.9.9 \
-    pgvector==0.2.4 \
-    python-jose[cryptography]==3.3.0 \
-    bcrypt==4.1.2 \
-    python-multipart==0.0.6 \
-    groq==0.4.1 \
-    python-dotenv==1.0.0 \
-    httpx==0.25.1 \
-    requests==2.31.0 \
-    && pip cache purge
-
-# Instalar dependências pesadas de ML em grupo separado
-RUN pip install --no-cache-dir \
-    numpy==1.26.2 \
-    pandas==2.1.4 \
-    scikit-learn==1.3.2 \
-    transformers==4.35.2 \
-    huggingface-hub==0.20.0 \
-    sentence-transformers==2.3.1 \
-    && pip cache purge \
-    && rm -rf /root/.cache/pip \
-    && rm -rf /tmp/*
+# Instalar todas as dependências do requirements.txt (exceto torch que já foi instalado)
+# Criar requirements temporário sem torch para evitar conflito de versão
+RUN grep -v "^torch==" requirements.txt > /tmp/requirements-no-torch.txt && \
+    pip install --no-cache-dir -r /tmp/requirements-no-torch.txt && \
+    rm /tmp/requirements-no-torch.txt && \
+    pip cache purge && \
+    rm -rf /root/.cache/pip && \
+    rm -rf /tmp/*
 
 # Copiar código da aplicação
 COPY . .

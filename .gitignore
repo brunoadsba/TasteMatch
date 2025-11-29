@@ -83,3 +83,32 @@ playwright-report/
 test-results/
 playwright/.cache/
 tests/screenshots/*.png
+
+# Arquivos temporários da migração Supabase
+backend/supabase_*.sql
+backend/*_inserts*.sql
+backend/supabase_chunk_*.sql
+backend/supabase_inserts*.sql
+
+# Backups
+backup_docs_*/
+*.dump
+*.csv
+deploy.log
+
+# Lighthouse cache
+lighthouse.*/
+
+# Arquivos estranhos
+backend/=*
+
+# Scripts temporários de migração
+backend/scripts/execute_*.py
+backend/scripts/execute_*.sh
+backend/scripts/split_*.py
+backend/scripts/create_final_chunks.py
+backend/scripts/monitor_migration.py
+backend/scripts/check_migration.sh
+backend/scripts/setup_postgres.*
+backend/scripts/generate_inserts_for_supabase.py
+backend/scripts/run_migration_auto.py

@@ -14,6 +14,10 @@
     "test:e2e:desktop": "playwright test --project='Desktop Chrome'",
     "test:e2e:demo": "playwright test tests/e2e/demo-mode-mobile.spec.ts",
     "test:e2e:demo:mobile": "playwright test tests/e2e/demo-mode-mobile.spec.ts --project='Mobile iPhone SE'",
+    "test:e2e:chef": "playwright test tests/e2e/chef-virtual.spec.ts",
+    "test:e2e:chef:ui": "playwright test tests/e2e/chef-virtual.spec.ts --ui",
+    "test:e2e:chef:mobile": "playwright test tests/e2e/chef-virtual.spec.ts --project='Mobile iPhone SE'",
+    "test:e2e:chef:desktop": "playwright test tests/e2e/chef-virtual.spec.ts --project='Desktop Chrome'",
     "test:e2e:report": "playwright show-report",
     "test:e2e:install": "playwright install"
   },

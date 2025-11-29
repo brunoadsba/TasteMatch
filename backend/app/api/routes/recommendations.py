@@ -298,13 +298,16 @@ def get_restaurant_insight(
         restaurant_id=restaurant_id
     )
     
-    similarity_score = 0.5  # Padrão se não houver recomendação
     if existing_rec:
-        similarity_score = float(existing_rec.similarity_score)
+        similarity_score = max(0.0, min(1.0, float(existing_rec.similarity_score)))
     else:
-        # Calcular similaridade rapidamente se não existir
-        # (simplificado: usar rating normalizado como aproximação)
-        similarity_score = float(restaurant.rating) / 5.0 if restaurant.rating else 0.5
+        # Calcular similaridade baseada no rating normalizado
+        # Garantir mínimo de 0.5 para restaurantes com rating >= 3.0
+        rating = float(restaurant.rating or 0)
+        if rating >= 3.0:
+            similarity_score = max(0.5, min(1.0, rating / 5.0))
+        else:
+            similarity_score = max(0.0, min(0.5, rating / 5.0))
     
     # Gerar insight
     try:

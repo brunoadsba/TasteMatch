@@ -6,6 +6,7 @@ import { OrderSimulator } from '@/components/features/OrderSimulator';
 import { LLMInsightPanel } from '@/components/features/LLMInsightPanel';
 import { ChefRecommendationCard } from '@/components/features/ChefRecommendationCard';
 import { ChefReasoningModal } from '@/components/features/ChefReasoningModal';
+import { ChefChatButton } from '@/components/features/ChefChatButton';
 import { useResetSimulation } from '@/hooks/useResetSimulation';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, LogOut, User, AlertCircle, History, Play, X, RotateCcw } from 'lucide-react';
@@ -24,12 +25,14 @@ export function Dashboard() {
   
   // Forçar refresh das recomendações se vier do onboarding
   useEffect(() => {
-    if (location.state?.refreshRecommendations) {
+    const shouldRefresh = location.state?.refreshRecommendations;
+    if (shouldRefresh) {
       refresh(false); // Refresh sem toast (já tem toast do onboarding)
       // Limpar state para evitar refresh em navegações futuras
       window.history.replaceState({}, document.title);
     }
-  }, [location.state, refresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state?.refreshRecommendations]); // Apenas refreshRecommendations como dependência
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [simulatorOpen, setSimulatorOpen] = useState(false);
   const [ordersRefreshTrigger, setOrdersRefreshTrigger] = useState(0); // Trigger para atualizar pedidos
@@ -408,6 +411,9 @@ export function Dashboard() {
           onOpenChange={setReasoningModalOpen}
         />
       )}
+
+      {/* Floating Action Button para Chef Virtual */}
+      <ChefChatButton />
     </div>
   );
 }

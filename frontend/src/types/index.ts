@@ -101,3 +101,38 @@ export interface OnboardingResponse {
   has_synthetic_vector: boolean;
 }
 
+// Chat types
+export interface ChatMessage {
+  id: number;
+  role: 'user' | 'assistant';
+  content: string;
+  audio_url?: string | null;
+  created_at: string;
+}
+
+export interface ChatResponse {
+  answer: string;
+  audio_url?: string | null;
+  sources?: Array<{
+    content: string;
+    metadata?: Record<string, any>;
+  }>;
+  validation?: {
+    confidence_score: number;
+    total_sources: number;
+    restaurant_sources: number;
+    mentioned_restaurants: string[];
+    valid_mentions: string[];
+    invalid_mentions: string[];
+    has_potential_hallucination: boolean;
+    used_fallback?: boolean;
+  };
+}
+
+export interface ChatHistoryResponse {
+  messages: ChatMessage[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
