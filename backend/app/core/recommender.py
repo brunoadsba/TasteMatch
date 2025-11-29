@@ -198,10 +198,21 @@ def calculate_similarity(
     Returns:
         float: Similaridade coseno (0.0 a 1.0)
     """
-    user_vec = np.array(user_embedding).reshape(1, -1)
-    rest_vec = np.array(restaurant_embedding).reshape(1, -1)
-    similarity = cosine_similarity(user_vec, rest_vec)[0][0]
-    return float(similarity)
+    try:
+        user_vec = np.array(user_embedding).reshape(1, -1)
+        rest_vec = np.array(restaurant_embedding).reshape(1, -1)
+        similarity = cosine_similarity(user_vec, rest_vec)[0][0]
+        # Garantir que está entre 0.0 e 1.0 (pode haver imprecisão de ponto flutuante)
+        similarity = max(0.0, min(1.0, float(similarity)))
+        return similarity
+    except Exception as e:
+        logger.error(
+            f"Erro ao calcular similaridade: {e}",
+            extra={"user_embedding_len": len(user_embedding) if user_embedding else 0,
+                   "restaurant_embedding_len": len(restaurant_embedding) if restaurant_embedding else 0}
+        )
+        # Retornar 0.0 em caso de erro (não 0.5, pois indica problema)
+        return 0.0
 
 
 def get_popular_restaurants(
@@ -212,6 +223,7 @@ def get_popular_restaurants(
     """
     Retorna restaurantes populares como fallback para cold start.
     Ordena por rating (maior primeiro).
+    Calcula relevância baseada no rating normalizado (rating/5.0).
     
     Args:
         db: Sessão do banco de dados
@@ -219,7 +231,7 @@ def get_popular_restaurants(
         min_rating: Rating mínimo
         
     Returns:
-        List[Dict]: Lista de restaurantes com similarity_score = 0.5 (fallback)
+        List[Dict]: Lista de restaurantes com similarity_score baseado no rating (0.0 a 1.0)
     """
     restaurants = get_restaurants(
         db=db,
@@ -241,9 +253,15 @@ def get_popular_restaurants(
     
     recommendations = []
     for restaurant in unique_restaurants[:limit]:
+        # Calcular relevância baseada no rating normalizado (0.0 a 1.0)
+        # Rating mínimo (3.5) = 0.7, Rating máximo (5.0) = 1.0
+        rating = float(restaurant.rating or min_rating)
+        # Normalizar para 0.0-1.0, mas garantir mínimo de 0.5 para restaurantes com rating >= min_rating
+        similarity_score = max(0.5, min(1.0, rating / 5.0))
+        
         recommendations.append({
             "restaurant": restaurant,
-            "similarity_score": 0.5  # Score neutro para fallback
+            "similarity_score": similarity_score
         })
     
     return recommendations
@@ -296,6 +314,10 @@ def generate_recommendations(
     
     # 3. Cold start: se usuário não tem pedidos E não tem vetor sintético, retornar populares
     if not orders and user_embedding is None:
+        logger.info(
+            f"Cold start para usuário {user_id}: retornando restaurantes populares",
+            extra={"user_id": user_id, "limit": limit}
+        )
         return get_popular_restaurants(db, limit=limit, min_rating=min_rating)
     
     # 4. Se não há embedding cached (nem sintético nem calculado), calcular novo baseado em pedidos
@@ -324,6 +346,10 @@ def generate_recommendations(
         
         # Se ainda não conseguiu calcular (sem restaurantes com embeddings), fallback
         if user_embedding is None:
+            logger.warning(
+                f"Não foi possível calcular embedding para usuário {user_id}: sem restaurantes com embeddings",
+                extra={"user_id": user_id, "orders_count": len(orders)}
+            )
             return get_popular_restaurants(db, limit=limit, min_rating=min_rating)
         
         # Cachear embedding nas preferências do usuário
@@ -383,6 +409,9 @@ def generate_recommendations(
             # Calcular similaridade
             similarity = calculate_similarity(user_embedding, restaurant_embedding)
             
+            # Garantir que similarity está entre 0.0 e 1.0 (pode haver imprecisão de ponto flutuante)
+            similarity = max(0.0, min(1.0, float(similarity)))
+            
             recommendations.append({
                 "restaurant": restaurant,
                 "similarity_score": similarity
@@ -392,10 +421,22 @@ def generate_recommendations(
             seen_restaurant_ids.add(restaurant.id)
         except Exception as e:
             # Se erro ao processar restaurante, pular
+            logger.warning(
+                f"Erro ao calcular similaridade para restaurante {restaurant.id}: {e}",
+                extra={"restaurant_id": restaurant.id}
+            )
             continue
     
     # 8. Ordenar por similaridade (maior primeiro)
     recommendations.sort(key=lambda x: x["similarity_score"], reverse=True)
+    
+    # Log para debug: verificar se similarity_score está variando
+    if recommendations:
+        scores = [rec["similarity_score"] for rec in recommendations[:5]]
+        logger.debug(
+            f"Top 5 similarity scores para usuário {user_id}",
+            extra={"user_id": user_id, "scores": scores, "total_recommendations": len(recommendations)}
+        )
     
     # 9. Retornar top N (garantir que não há duplicatas mesmo após ordenação)
     unique_recommendations = []

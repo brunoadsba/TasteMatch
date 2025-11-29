@@ -30,6 +30,7 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 - **Raciocínio do Chef**: modal com explicação detalhada do porquê daquela escolha, baseada no perfil do usuário
 - **Simulador de Pedidos**: quick personas (Vida Saudável, Comfort Food, Gourmet) e modo manual para criar pedidos simulados
 - **Terminal de Raciocínio da IA**: terminal visual que mostra passo a passo como o sistema atualiza o perfil e recalcula recomendações
+- **🤖 Chef Virtual**: chatbot conversacional com RAG, suporte a áudio (STT/TTS), e monitoramento completo de métricas LLM
 
 ### Status do Projeto
 
@@ -39,19 +40,24 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 - ✅ **IA/ML:** 100% completo (embeddings, algoritmo de recomendação, vetor sintético)
 - ✅ **GenAI:** 100% completo (Groq API com retry robusto)
 - ✅ **Frontend:** 100% completo (React + Vite + TypeScript + Shadcn/UI, onboarding)
-- ✅ **Deploy:** 100% completo (Backend no Fly.io v28, Frontend no Netlify)
+- ✅ **Deploy:** 100% completo (Backend no Fly.io v42, Frontend no Netlify)
+- ✅ **Banco de Dados:** 100% migrado para Supabase (PostgreSQL + pgvector)
 - ✅ **CORS:** 100% corrigido (URL da API detecta ambiente automaticamente)
 - ✅ **Mobile-First:** 100% completo (design responsivo, menu hambúrguer, viewports dinâmicos)
 - ✅ **Testes E2E:** 100% completo (Playwright, 50 testes, 0 falhas)
+- ✅ **Chef Virtual:** 95% completo (RAG, STT/TTS, monitoramento LLM, testes E2E)
 
 ### Tecnologias Principais
 
 **Backend:**
 - FastAPI 0.104+ (Python 3.11+)
 - SQLAlchemy 2.0+ com Alembic (migrations)
-- SQLite (desenvolvimento) / PostgreSQL com pgvector (produção)
+- SQLite (desenvolvimento) / **Supabase PostgreSQL** com pgvector (produção)
 - JWT para autenticação
 - Bcrypt para hash de senhas
+- LangChain 0.3+ (RAG, LLM integration)
+- Groq API (LLM, Whisper STT)
+- Edge-TTS (text-to-speech)
 
 **IA/ML:**
 - sentence-transformers (all-MiniLM-L6-v2)
@@ -59,9 +65,11 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 - pandas, numpy
 
 **GenAI:**
-- Groq API (Llama 3.3 70B Versatile)
+- Groq API (Llama 3.3 70B Versatile, Llama 3.1 8B Instant para Chef Virtual)
 - Retry com backoff exponencial
 - Cache de insights (TTL 7 dias)
+- RAG com PGVector (Chef Virtual)
+- Hybrid Search (busca exata + semântica)
 
 **Frontend:**
 - React 18+ com TypeScript
@@ -183,13 +191,21 @@ Após executar o seed, você pode usar estas credenciais:
 
 ## 📚 Documentação
 
-### Documentos Principais
+### Documentação
+
+**📚 [Ver Documentação Completa](./Docs/README.md)**
+
+#### Documentos Principais
 
 - **[SPEC.md](./Docs/SPEC.md)** - Especificação técnica completa
-- **[RESUMO_DEPLOY_FINAL.md](./Docs/RESUMO_DEPLOY_FINAL.md)** - Resumo do deploy em produção
 - **[DEPLOY.md](./Docs/DEPLOY.md)** - Guia completo de deploy
-- **[VALIDACAO_PRODUCAO.md](./Docs/VALIDACAO_PRODUCAO.md)** - Validação de endpoints em produção
+- **[STATUS_PROJETO.md](./Docs/STATUS_PROJETO.md)** - Status atual do projeto
+- **[README-CHEF-VIRTUAL.md](./Docs/README-CHEF-VIRTUAL.md)** - 📖 Documentação completa do Chef Virtual (RAG, STT/TTS, monitoramento)
+- **[STATUS-CHEF-VIRTUAL.md](./Docs/STATUS-CHEF-VIRTUAL.md)** - Status detalhado e lições aprendidas do Chef Virtual
+- **[licoes-aprendidas.md](./Docs/licoes-aprendidas.md)** - Lições aprendidas durante o desenvolvimento
 - **[plano-de-acao.md](./Docs/plano-de-acao.md)** - Plano de desenvolvimento detalhado
+- **[supabase.md](./Docs/supabase.md)** - Plano de migração para Supabase
+- **[status-migracao-supabase.md](./Docs/status-migracao-supabase.md)** - Status da migração Supabase
 
 ### Endpoints Principais da API
 
@@ -413,9 +429,9 @@ pytest tests/  # Quando implementado
 
 ### Plataformas Utilizadas
 
-- **Backend:** Fly.io (São Paulo, Brasil)
+- **Backend:** Fly.io (São Paulo, Brasil) - v42
 - **Frontend:** Netlify
-- **Banco de Dados:** PostgreSQL (Fly.io)
+- **Banco de Dados:** Supabase PostgreSQL (São Paulo, Brasil) com pgvector
 
 ### Status do Deploy
 
@@ -429,9 +445,8 @@ pytest tests/  # Quando implementado
 - ✅ Variáveis de ambiente configuradas
 
 **Para detalhes completos do deploy, consulte:**
-- [RESUMO_DEPLOY_FINAL.md](./Docs/RESUMO_DEPLOY_FINAL.md) - Resumo completo do deploy
 - [DEPLOY.md](./Docs/DEPLOY.md) - Guia completo de deploy
-- [VALIDACAO_PRODUCAO.md](./Docs/VALIDACAO_PRODUCAO.md) - Validação de endpoints em produção
+- [Docs/README.md](./Docs/README.md) - Índice completo da documentação
 
 ### Como Fazer Deploy (Para Referência)
 
@@ -498,13 +513,16 @@ Este é um projeto de demonstração técnica. Para desenvolvimento:
 - ✅ Autenticação JWT completa
 - ✅ Cache de embeddings e insights
 - ✅ Retry robusto para API externa
-- ✅ Documentação completa (SPEC.md)
+- ✅ Documentação completa (SPEC.md, README-CHEF-VIRTUAL.md)
+- ✅ Chef Virtual com RAG, STT/TTS e monitoramento LLM
 
 **Próximas versões planejadas:**
 - Melhorias de UX no frontend
 - Testes automatizados
 - Popular banco com dados reais
 - Features adicionais (histórico completo, favoritos)
+- Dashboard de métricas LLM (Chef Virtual)
+- Cache de respostas frequentes (Chef Virtual)
 
 ---
 
@@ -525,7 +543,20 @@ Projeto de demonstração técnica - Uso educacional.
 
 **Desenvolvido com ❤️ para demonstrar capacidade técnica em IA e desenvolvimento de sistemas.**
 
-**Última atualização:** 26/11/2025  
-**Status:** ✅ MVP Funcional - **DEPLOYADO EM PRODUÇÃO**
+**Última atualização:** 29/11/2025  
+**Status:** ✅ MVP Funcional - **DEPLOYADO EM PRODUÇÃO** - **Migração Supabase Concluída**
 
 🌐 **Acesse agora:** https://tastematch.netlify.app
+
+### 🎉 Migração para Supabase Concluída (29/11/2025)
+
+- ✅ Banco de dados migrado para Supabase PostgreSQL
+- ✅ Extensão pgvector habilitada
+- ✅ 24 restaurantes com embeddings regenerados
+- ✅ Base RAG migrada (64 documentos)
+- ✅ Configurações otimizadas para Supabase (connection pooling)
+- ✅ API v42 em produção funcionando
+
+**Documentação da migração:**
+- [status-migracao-supabase.md](./Docs/status-migracao-supabase.md) - Status completo da migração
+- [supabase.md](./Docs/supabase.md) - Plano e guia de migração

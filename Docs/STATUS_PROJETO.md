@@ -1,7 +1,7 @@
 # TasteMatch - Status do Projeto
 
-> **Última atualização:** 26/11/2025  
-> **Status Geral:** ✅ MVP Funcional + Melhorias P0/P1 + Onboarding Gamificado + Deploy em Produção
+> **Última atualização:** 29/11/2025  
+> **Status Geral:** ✅ MVP Funcional + Migração Supabase Concluída + Deploy v42 em Produção
 
 ---
 
@@ -16,7 +16,8 @@ O projeto TasteMatch está **funcional end-to-end** com backend completo, sistem
 - ✅ **GenAI:** 100% completo
 - ✅ **Frontend:** 100% completo (incluindo onboarding e correção de CORS)
 - ✅ **Testes:** 100% completo (53 testes automatizados)
-- ✅ **Deploy:** 100% completo (Backend v28 no Fly.io, Frontend no Netlify)
+- ✅ **Deploy:** 100% completo (Backend v42 no Fly.io, Frontend no Netlify)
+- ✅ **Banco de Dados:** 100% migrado para Supabase PostgreSQL com pgvector
 - ✅ **CORS:** 100% corrigido (URL da API detecta ambiente automaticamente)
 
 ---
@@ -139,13 +140,21 @@ O projeto TasteMatch está **funcional end-to-end** com backend completo, sistem
 - ⏳ Otimização de queries adicionais (pendente - não crítico)
 - ⏳ Documentação adicional (pendente)
 
-### **FASE 12: Deploy e Produção** ❌ (0%)
-- ❌ Preparação para deploy (pendente)
-- ❌ Configuração Fly.io para backend (pendente)
-- ❌ Configuração Netlify/Vercel para frontend (pendente)
-- ❌ Variáveis de ambiente de produção (pendente)
-- ❌ PostgreSQL com pgvector em produção (pendente)
-- ❌ Validação em produção (pendente)
+### **FASE 12: Deploy e Produção** ✅ (100%)
+- ✅ Backend deployado no Fly.io (v42)
+- ✅ Frontend deployado no Netlify
+- ✅ Banco de dados migrado para Supabase PostgreSQL
+- ✅ Extensão pgvector habilitada
+- ✅ Embeddings regenerados (24/24 restaurantes)
+- ✅ Base RAG migrada (64 documentos)
+- ✅ Configurações otimizadas para Supabase
+- ✅ Todos os endpoints funcionando em produção
+- ✅ Preparação para deploy (concluído)
+- ✅ Configuração Fly.io para backend (concluído - v42)
+- ✅ Configuração Netlify para frontend (concluído)
+- ✅ Variáveis de ambiente de produção (configuradas)
+- ✅ PostgreSQL com pgvector em produção (Supabase)
+- ✅ Validação em produção (concluída)
 
 ---
 
@@ -450,6 +459,78 @@ npm run dev
 
 ---
 
-**Última atualização:** 26/11/2025  
-**Status:** ✅ MVP Completo + Onboarding + Deploy + Mobile-First + Testes E2E
+---
+
+## 🗄️ Sprint 6: Migração para Supabase (29/11/2025)
+
+### Objetivo
+Migrar banco de dados PostgreSQL do Fly.io Postgres para Supabase, mantendo apenas a API FastAPI no Fly.io e movendo todos os dados pesados para Supabase.
+
+### Funcionalidades Implementadas
+
+1. ✅ **Migração Completa de Dados**
+   - Schema restaurado no Supabase (10 tabelas)
+   - 15 usuários migrados
+   - 24 restaurantes migrados
+   - 102 pedidos migrados
+   - 5.156 recomendações migradas
+
+2. ✅ **Embeddings Regenerados**
+   - 24/24 restaurantes com embeddings
+   - Script de geração executado com sucesso
+   - Sistema de recomendações funcional
+
+3. ✅ **Base RAG Migrada**
+   - Coleção `tastematch_knowledge` criada
+   - 64 documentos migrados
+   - Chef Virtual funcionando
+
+4. ✅ **Configurações Otimizadas**
+   - Connection pooling configurado (porta 6543)
+   - Pool otimizado para Supabase (pool_size=20, max_overflow=0)
+   - SSL obrigatório configurado
+   - Variável `DB_PROVIDER=supabase` configurada
+
+5. ✅ **Resolução de Conflitos de Dependências**
+   - 7 conflitos de dependências Python resolvidos
+   - Build Docker validado localmente
+   - Deploy v42 bem-sucedido
+
+6. ✅ **Correção do Alembic**
+   - Erro de interpolação do ConfigParser corrigido
+   - URLs com percent-encoding tratadas corretamente
+   - Migrations funcionando
+
+### Arquivos Modificados/Criados
+- **Migração**: `Docs/supabase.md` (plano completo)
+- **Status**: `Docs/status-migracao-supabase.md` (status detalhado)
+- **Erros**: `Docs/erros-deploy-migracao.md` (documentação de erros)
+- **Código**: `backend/app/database/base.py` (pool otimizado)
+- **Código**: `backend/alembic/env.py` (correção ConfigParser)
+- **Scripts**: `backend/scripts/migrate_rag_to_supabase.py`
+- **Scripts**: `backend/scripts/validate_supabase_migration.py`
+
+### Status
+- ✅ Migração 100% concluída
+- ✅ API v42 em produção funcionando
+- ✅ Todos os endpoints validados
+- ✅ Documentação completa atualizada
+
+### Lições Aprendidas
+- Resolver conflitos de dependências incrementalmente
+- Testar build local antes de deploy
+- Configuração explícita é melhor que detecção automática
+- Embeddings precisam ser regenerados após migração
+- ConfigParser e percent-encoding requerem tratamento especial
+
+**Documentação Completa:**
+- [status-migracao-supabase.md](./status-migracao-supabase.md)
+- [supabase.md](./supabase.md)
+- [erros-deploy-migracao.md](./erros-deploy-migracao.md)
+- [licoes-aprendidas.md](./licoes-aprendidas.md)
+
+---
+
+**Última atualização:** 29/11/2025  
+**Status:** ✅ MVP Completo + Onboarding + Deploy + Mobile-First + Testes E2E + **Migração Supabase Concluída**
 

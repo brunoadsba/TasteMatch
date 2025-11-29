@@ -5,7 +5,7 @@ Operações CRUD (Create, Read, Update, Delete) para o TasteMatch.
 from sqlalchemy.orm import Session, joinedload, selectinload, load_only
 from sqlalchemy import select
 from typing import Optional, List, Dict, Any
-from app.database.models import User, Restaurant, Order, Recommendation, UserPreferences
+from app.database.models import User, Restaurant, Order, Recommendation, UserPreferences, ChatMessage, LLMMetric
 from app.models.user import UserCreate
 from app.models.restaurant import RestaurantCreate
 from app.models.order import OrderCreate
@@ -345,4 +345,214 @@ def create_or_update_user_preferences(
         db.commit()
         db.refresh(db_preferences)
         return db_preferences
+
+
+# ==================== CHAT MESSAGES ====================
+
+def create_chat_message(
+    db: Session,
+    user_id: int,
+    role: str,
+    content: str,
+    audio_url: Optional[str] = None
+) -> ChatMessage:
+    """
+    Cria uma nova mensagem de chat
+    
+    Args:
+        db: Sessão do banco de dados
+        user_id: ID do usuário
+        role: Role da mensagem ("user" ou "assistant")
+        content: Conteúdo da mensagem
+        audio_url: URL do áudio (opcional)
+    
+    Returns:
+        Mensagem criada
+    """
+    db_message = ChatMessage(
+        user_id=user_id,
+        role=role,
+        content=content,
+        audio_url=audio_url
+    )
+    db.add(db_message)
+    db.commit()
+    db.refresh(db_message)
+    return db_message
+
+
+def get_user_chat_messages(
+    db: Session,
+    user_id: int,
+    skip: int = 0,
+    limit: int = 50
+) -> List[ChatMessage]:
+    """
+    Lista mensagens de chat de um usuário
+    
+    Args:
+        db: Sessão do banco de dados
+        user_id: ID do usuário
+        skip: Offset para paginação
+        limit: Limite de resultados
+    
+    Returns:
+        Lista de mensagens ordenadas por data (mais antigas primeiro)
+    """
+    stmt = (
+        select(ChatMessage)
+        .where(ChatMessage.user_id == user_id)
+        .order_by(ChatMessage.created_at.asc())  # Mais antigas primeiro
+        .offset(skip)
+        .limit(limit)
+    )
+    result = db.execute(stmt)
+    return list(result.scalars().all())
+
+
+def get_user_chat_messages_recent(
+    db: Session,
+    user_id: int,
+    limit: int = 20
+) -> List[ChatMessage]:
+    """
+    Lista mensagens recentes de um usuário (mais recentes primeiro)
+    
+    Args:
+        db: Sessão do banco de dados
+        user_id: ID do usuário
+        limit: Limite de resultados
+    
+    Returns:
+        Lista de mensagens ordenadas por data (mais recentes primeiro)
+    """
+    stmt = (
+        select(ChatMessage)
+        .where(ChatMessage.user_id == user_id)
+        .order_by(ChatMessage.created_at.desc())  # Mais recentes primeiro
+        .limit(limit)
+    )
+    result = db.execute(stmt)
+    return list(result.scalars().all())
+
+
+def delete_user_chat_messages(
+    db: Session,
+    user_id: int
+) -> int:
+    """
+    Deleta todas as mensagens de chat de um usuário
+    
+    Args:
+        db: Sessão do banco de dados
+        user_id: ID do usuário
+    
+    Returns:
+        Número de mensagens deletadas
+    """
+    stmt = select(ChatMessage).where(ChatMessage.user_id == user_id)
+    result = db.execute(stmt)
+    messages = list(result.scalars().all())
+    
+    count = len(messages)
+    for message in messages:
+        db.delete(message)
+    
+    db.commit()
+    return count
+
+
+# ==================== LLM METRICS ====================
+
+def create_llm_metric(
+    db: Session,
+    metrics: Dict[str, Any]
+) -> LLMMetric:
+    """
+    Cria um registro de métrica LLM.
+    
+    Args:
+        db: Sessão do banco de dados
+        metrics: Dicionário com métricas (do LLMMonitoringCallback.get_metrics())
+    
+    Returns:
+        LLMMetric criado
+    """
+    from decimal import Decimal
+    
+    metric = LLMMetric(
+        user_id=metrics.get("user_id"),
+        model=metrics.get("model", "llama-3.1-8b-instant"),
+        question=metrics.get("question"),  # Opcional, pode ser None por privacidade
+        input_tokens=metrics.get("input_tokens", 0),
+        output_tokens=metrics.get("output_tokens", 0),
+        total_tokens=metrics.get("total_tokens", 0),
+        latency_ms=metrics.get("latency_ms"),
+        estimated_cost_usd=Decimal(str(metrics.get("estimated_cost_usd", 0.0))),
+        response_length=metrics.get("response_length", 0),
+        error=metrics.get("error")
+    )
+    
+    db.add(metric)
+    db.commit()
+    db.refresh(metric)
+    return metric
+
+
+def get_llm_metrics_summary(
+    db: Session,
+    user_id: Optional[int] = None,
+    days: int = 7
+) -> Dict[str, Any]:
+    """
+    Obtém resumo de métricas LLM.
+    
+    Args:
+        db: Sessão do banco de dados
+        user_id: ID do usuário (opcional, se None retorna todas)
+        days: Número de dias para considerar
+    
+    Returns:
+        Dicionário com resumo de métricas
+    """
+    from datetime import datetime, timedelta
+    from sqlalchemy import func
+    
+    cutoff_date = datetime.utcnow() - timedelta(days=days)
+    
+    # Construir query base
+    query = db.query(
+        func.count(LLMMetric.id).label("total_calls"),
+        func.sum(LLMMetric.total_tokens).label("total_tokens"),
+        func.sum(LLMMetric.estimated_cost_usd).label("total_cost_usd"),
+        func.avg(LLMMetric.latency_ms).label("avg_latency_ms"),
+        func.count(LLMMetric.id).filter(LLMMetric.error.isnot(None)).label("error_count")
+    ).filter(LLMMetric.created_at >= cutoff_date)
+    
+    # Filtrar por usuário se especificado
+    if user_id:
+        query = query.filter(LLMMetric.user_id == user_id)
+    
+    result = query.first()
+    
+    if not result:
+        return {
+            "total_calls": 0,
+            "total_tokens": 0,
+            "total_cost_usd": 0.0,
+            "avg_latency_ms": 0,
+            "error_rate": 0.0
+        }
+    
+    total_calls = result.total_calls or 0
+    error_count = result.error_count or 0
+    error_rate = (error_count / total_calls * 100) if total_calls > 0 else 0.0
+    
+    return {
+        "total_calls": total_calls,
+        "total_tokens": int(result.total_tokens or 0),
+        "total_cost_usd": float(result.total_cost_usd or 0.0),
+        "avg_latency_ms": int(result.avg_latency_ms or 0),
+        "error_rate": round(error_rate, 2)
+    }
 

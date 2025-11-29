@@ -1,0 +1,57 @@
+{
+  "backend": {
+    "app_name": "tastematch-api",
+    "url": "https://tastematch-api.fly.dev",
+    "health_check_path": "/health",
+    "health_check_timeout": 60,
+    "health_check_retry_interval": 5,
+    "health_check_max_retries": 12,
+    "critical_endpoints": [
+      "/health",
+      "/api/recommendations",
+      "/api/onboarding/complete",
+      "/api/chat/",
+      "/docs"
+    ]
+  },
+  "frontend": {
+    "url": "https://tastematch.netlify.app",
+    "build_dir": "frontend/dist",
+    "build_command": "cd frontend && npm install && npm run build"
+  },
+  "required_secrets": [
+    "SECRET_KEY",
+    "JWT_SECRET_KEY",
+    "GROQ_API_KEY",
+    "ENVIRONMENT",
+    "DEBUG"
+  ],
+  "secret_validation": {
+    "DEBUG": {
+      "required_value": "False",
+      "case_sensitive": false
+    },
+    "ENVIRONMENT": {
+      "required_value": "production",
+      "case_sensitive": false
+    },
+    "SECRET_KEY": {
+      "min_length": 32
+    },
+    "JWT_SECRET_KEY": {
+      "min_length": 32
+    }
+  },
+  "migrations": {
+    "wait_for_deploy": true,
+    "verify_version": true,
+    "timeout": 300
+  },
+  "deploy": {
+    "lock_file": "/tmp/tastematch-deploy.lock",
+    "lock_timeout": 3600,
+    "log_file": "deploy.log",
+    "max_concurrent_deploys": 1
+  }
+}
+

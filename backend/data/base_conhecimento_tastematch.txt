@@ -1,0 +1,108 @@
+# Base de Conhecimento TasteMatch - Chef Virtual
+
+## Sobre o TasteMatch
+O TasteMatch é uma plataforma de recomendação de restaurantes que utiliza inteligência artificial para personalizar sugestões baseadas nas preferências gastronômicas dos usuários.
+
+## Tipos de Culinária
+
+### Culinária Brasileira
+- Pratos típicos: Feijoada, Pão de Açúcar, Moqueca, Churrasco
+- Características: Rica em sabores, ingredientes regionais, tradição familiar
+- Melhores restaurantes brasileiros oferecem pratos autênticos e bem temperados
+
+### Culinária Italiana
+- Pratos populares: Pizza, Massas (Carbonara, Bolognese), Risotto, Lasanha
+- Características: Ingredientes frescos, molhos tradicionais, queijos de qualidade
+- Dica: Massas al dente são o padrão de qualidade
+
+### Culinária Japonesa
+- Pratos principais: Sushi, Sashimi, Temaki, Yakisoba, Ramen
+- Características: Frescor dos ingredientes, apresentação cuidadosa, sabores equilibrados
+- Dica: Sushi de qualidade usa peixe fresco e arroz temperado corretamente
+
+### Culinária Mexicana
+- Pratos típicos: Tacos, Burritos, Quesadillas, Guacamole, Nachos
+- Características: Temperos picantes, ingredientes frescos, sabores intensos
+- Dica: A qualidade do guacamole é um bom indicador do restaurante
+
+### Culinária Árabe
+- Pratos populares: Kebab, Shawarma, Hummus, Falafel, Tabule
+- Características: Especiarias marcantes, carnes bem temperadas, vegetais frescos
+- Dica: Pão pita fresco é essencial para uma boa experiência
+
+### Fast Food
+- Opções: Hambúrgueres, Batatas fritas, Frango frito, Sanduíches
+- Características: Praticidade, sabor consistente, preço acessível
+- Dica: Avalie a qualidade dos ingredientes e o tempo de preparo
+
+### Vegetariana/Vegana
+- Opções: Saladas criativas, Hambúrgueres vegetais, Pratos à base de plantas
+- Características: Ingredientes frescos, criatividade, opções nutritivas
+- Dica: Restaurantes especializados geralmente oferecem melhor qualidade
+
+## Dicas Gerais sobre Restaurantes
+
+### Avaliação de Qualidade
+- Avaliações acima de 4.5 estrelas geralmente indicam excelente qualidade
+- Leia comentários recentes para verificar consistência
+- Restaurantes com muitas avaliações tendem a ser mais confiáveis
+
+### Preços
+- Faixa econômica: R$ 20-40 por pessoa
+- Faixa média: R$ 40-80 por pessoa
+- Faixa alta: R$ 80+ por pessoa
+
+### Horários
+- Almoço: Geralmente das 11h30 às 15h
+- Jantar: Geralmente das 18h às 23h
+- Alguns restaurantes funcionam apenas no jantar
+
+### Delivery vs Presencial
+- Delivery: Praticidade, mas pode afetar qualidade de alguns pratos
+- Presencial: Melhor experiência, especialmente para pratos quentes e frescos
+- Alguns pratos (como sushi) são melhores no presencial
+
+## Preferências Alimentares
+
+### Vegetarianos
+- Buscar restaurantes com opções vegetarianas claramente marcadas
+- Verificar se há opções além de saladas
+- Alguns restaurantes têm cardápios vegetarianos completos
+
+### Veganos
+- Verificar se o restaurante tem opções veganas certificadas
+- Atenção a ingredientes ocultos (mel, leite, ovos)
+- Restaurantes veganos especializados são mais confiáveis
+
+### Intolerâncias
+- Glúten: Verificar se há opções sem glúten
+- Lactose: Confirmar se há alternativas sem leite
+- Restaurantes especializados em dietas restritivas são mais seguros
+
+### Preferências de Sabor
+- Picante: Verificar nível de pimenta nos pratos
+- Doce: Alguns restaurantes se especializam em sobremesas
+- Salgado: Verificar se o restaurante tempera bem os pratos
+
+## Sobre o iFood
+- O iFood é uma das principais plataformas de delivery do Brasil
+- Oferece uma ampla variedade de restaurantes e culinárias
+- Sistema de avaliações ajuda na escolha
+- Promoções e cupons podem tornar pedidos mais acessíveis
+- Tempo de entrega varia conforme localização e trânsito
+
+## Dicas para Escolher Restaurantes
+1. Considere suas preferências gastronômicas
+2. Verifique avaliações e comentários recentes
+3. Compare preços e faixas de preço
+4. Considere distância e tempo de entrega (para delivery)
+5. Experimente novos tipos de culinária ocasionalmente
+6. Restaurantes locais frequentemente oferecem melhor custo-benefício
+7. Peça recomendações baseadas em seus pedidos anteriores
+
+## Sazonalidade
+- Alguns pratos são melhores em certas épocas do ano
+- Frutos do mar frescos são melhores em temporadas específicas
+- Sobremesas especiais aparecem em datas comemorativas
+- Restaurantes podem ter pratos sazonais no cardápio
+

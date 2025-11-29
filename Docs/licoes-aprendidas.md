@@ -739,7 +739,206 @@ Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogCont
 
 ---
 
-**Última atualização:** 27/11/2025  
+---
+
+## 🗄️ Migração para Supabase (29/11/2025)
+
+### Problema: Conflitos de Dependências Python durante Deploy
+
+**Contexto:** Durante a migração para Supabase, múltiplos conflitos de dependências Python impediram o deploy da API no Fly.io.
+
+**Erros Encontrados:**
+1. `langchain-core` vs `langchain` - versão incompatível
+2. `pydantic` vs `langchain` - versão muito antiga
+3. `pydantic-settings` vs `pydantic` - incompatibilidade
+4. `langchain-groq` vs `langchain-core` - versão muito antiga
+5. `huggingface-hub` vs `langchain-huggingface` - conflito de versões
+6. `langchain-huggingface` vs `langchain-core` - incompatibilidade fundamental
+
+**Solução Aplicada:**
+1. **Abordagem incremental**: Resolver um conflito por vez, testando após cada correção
+2. **Análise de dependências**: Verificar requisitos de cada biblioteca antes de atualizar
+3. **Remoção de dependências não utilizadas**: Identificar e remover `langchain-huggingface` (não usado no código)
+4. **Atualização estratégica**: Atualizar apenas o necessário, não tudo de uma vez
+
+**Versões Finais:**
+- `pydantic==2.7.4` (compatível com langchain 0.3.27)
+- `pydantic-settings==2.12.0` (compatível com pydantic 2.7.4)
+- `langchain-core==0.3.72` (requerido por langchain 0.3.27)
+- `langchain-groq>=0.3.0` (compatível com langchain-core 0.3.72)
+- `huggingface-hub>=0.16.4` (suficiente para transformers e sentence-transformers)
+- `langchain-huggingface` removido (não utilizado)
+
+**Lição:** 
+- Resolver conflitos de dependências incrementalmente é mais seguro que atualizar tudo de uma vez
+- Sempre verificar se dependências declaradas são realmente utilizadas no código
+- Testar build local antes de deploy em produção
+- Documentar cada correção para facilitar troubleshooting futuro
+
+---
+
+### Problema: Erro de Interpolação do ConfigParser no Alembic
+
+**Erro:**
+```
+ValueError: invalid interpolation syntax in 'postgresql://...%23%40...' at position 43
+```
+
+**Causa:** O `ConfigParser` do Python interpreta `%` como caractere de interpolação. URLs do Supabase contêm caracteres codificados (percent-encoding) como `%23` (`#`) e `%40` (`@`).
+
+**Solução:**
+1. Escapar `%` ao definir no ConfigParser (duplicar para `%%`)
+2. Usar URL original diretamente nas funções de migração, evitando o ConfigParser
+3. Armazenar URL original em variável separada para uso direto
+
+**Implementação:**
+```python
+# Escapar para ConfigParser
+database_url_escaped = database_url.replace("%", "%%")
+config.set_main_option("sqlalchemy.url", database_url_escaped)
+
+# Armazenar URL original para uso direto
+DATABASE_URL = database_url
+
+# Usar URL original nas funções de migração
+def run_migrations_online():
+    from sqlalchemy import create_engine
+    connectable = create_engine(DATABASE_URL, poolclass=pool.NullPool)
+```
+
+**Lição:** 
+- ConfigParser do Python tem comportamento especial com `%` (interpolação)
+- URLs com percent-encoding precisam ser tratadas cuidadosamente
+- Usar valores originais diretamente quando possível, evitando processamento intermediário
+
+---
+
+### Problema: Embeddings Não Migrados
+
+**Contexto:** Após migração do banco de dados para Supabase, os embeddings dos restaurantes não foram migrados (0 restaurantes com embeddings).
+
+**Causa:** 
+- Embeddings são gerados dinamicamente pelo código Python
+- Não são parte do dump SQL do banco
+- Precisam ser regenerados após migração
+
+**Solução:**
+1. Executar script de geração de embeddings: `python scripts/generate_embeddings.py`
+2. Script processa 1 restaurante por vez para evitar problemas de memória
+3. Validação após geração para confirmar sucesso
+
+**Lição:**
+- Embeddings gerados dinamicamente não são migrados automaticamente
+- Sempre verificar dados derivados após migração
+- Ter scripts de regeneração prontos para dados computados
+
+---
+
+### Lição: Configuração Explícita é Melhor que Implícita
+
+**Aprendizado:** Usar variável de ambiente `DB_PROVIDER=supabase` em vez de detecção automática.
+
+**Benefícios:**
+- Configurações otimizadas aplicadas corretamente
+- Facilita debugging (sabe exatamente qual provider está sendo usado)
+- Segue princípios 12-factor app
+- Evita detecção incorreta baseada em padrões de URL
+
+**Implementação:**
+```python
+IS_SUPABASE = os.getenv("DB_PROVIDER", "").lower() == "supabase"
+
+if IS_SUPABASE:
+    pool_size = 20
+    max_overflow = 0
+    pool_recycle = 300
+    connect_args = {"sslmode": "require", ...}
+```
+
+**Lição:** Configuração explícita via variáveis de ambiente é mais confiável e manutenível que detecção automática.
+
+---
+
+### Lição: Connection Pooling do Supabase Requer Configuração Especial
+
+**Aprendizado:** Supabase usa PgBouncer em Transaction Mode, que requer configurações específicas.
+
+**Configurações Importantes:**
+- `max_overflow=0` - Evitar overflow agressivo em Transaction Mode
+- `pool_recycle=300` - Reciclar conexões mais rápido (pooler gerencia isso)
+- `pool_size=20` - Supabase aguenta mais conexões que Fly Postgres
+- `sslmode=require` - SSL obrigatório no Supabase
+- `keepalives` configurados - Manter conexões vivas
+
+**Lição:** 
+- Connection poolers (como PgBouncer) têm comportamentos específicos
+- Transaction Mode não suporta prepared statements em alguns casos
+- Sempre consultar documentação do provider para configurações otimizadas
+
+---
+
+### Lição: Testar Build Local Antes de Deploy
+
+**Aprendizado:** Durante resolução de conflitos de dependências, testar build Docker localmente economizou muito tempo.
+
+**Processo:**
+```bash
+# Build local
+docker build -t tastematch-test .
+
+# Validar dependências
+docker run --rm tastematch-test pip check
+
+# Testar imports críticos
+docker run --rm tastematch-test python -c "import slowapi; import langchain; ..."
+```
+
+**Benefícios:**
+- Detecta problemas antes do deploy
+- Mais rápido que deploy no Fly.io
+- Permite iteração rápida
+- Economiza recursos do Fly.io
+
+**Lição:** Sempre testar build local antes de deploy, especialmente quando há mudanças em dependências.
+
+---
+
+### Lição: Documentar Erros e Soluções Durante o Processo
+
+**Aprendizado:** Criar documento estruturado de erros (`erros-deploy-migracao.md`) facilitou muito o troubleshooting.
+
+**Estrutura do Documento:**
+- Resumo executivo com estatísticas
+- Cada erro com ID, categoria, severidade, status
+- Mensagem de erro completa
+- Versões antes/depois
+- Solução aplicada
+- Logs relacionados
+
+**Benefícios:**
+- Facilita colaboração (outros devs/IAs podem ajudar)
+- Histórico completo para referência futura
+- Identifica padrões de problemas
+- Ajuda a priorizar correções
+
+**Lição:** Documentar problemas e soluções durante o processo é muito mais eficiente que tentar lembrar depois.
+
+---
+
+### Resumo das Lições da Migração Supabase
+
+1. **Resolver conflitos incrementalmente** - Um por vez é mais seguro
+2. **Verificar dependências não utilizadas** - Remover o que não é usado
+3. **Testar build local antes de deploy** - Economiza tempo e recursos
+4. **Configuração explícita > detecção automática** - Mais confiável
+5. **Connection poolers requerem configuração especial** - Consultar documentação
+6. **Embeddings precisam ser regenerados** - Não são parte do dump SQL
+7. **ConfigParser e percent-encoding não combinam** - Usar valores originais quando possível
+8. **Documentar durante o processo** - Facilita troubleshooting e colaboração
+
+---
+
+**Última atualização:** 29/11/2025  
 **Projeto:** TasteMatch - Agente de Recomendação Inteligente  
-**Fase:** 14 - Melhorias UX Mobile + Correção Acessibilidade ✅
+**Fase:** 15 - Migração Supabase Concluída ✅
 

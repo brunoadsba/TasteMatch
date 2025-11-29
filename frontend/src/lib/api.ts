@@ -13,6 +13,8 @@ import type {
   ApiError,
   OnboardingRequest,
   OnboardingResponse,
+  ChatResponse,
+  ChatHistoryResponse,
 } from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 
@@ -151,6 +153,47 @@ class ApiClient {
   async completeOnboarding(data: OnboardingRequest): Promise<OnboardingResponse> {
     const response = await this.client.post<OnboardingResponse>('/api/onboarding/complete', data);
     return response.data;
+  }
+
+  // Chat
+  async sendChatMessage(message: string): Promise<ChatResponse> {
+    const formData = new FormData();
+    formData.append('message', message);
+    
+    const response = await this.client.post<ChatResponse>('/api/chat/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
+  async sendChatAudio(audioBlob: Blob): Promise<ChatResponse> {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'audio.webm');
+    
+    const response = await this.client.post<ChatResponse>('/api/chat/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
+  async getChatHistory(params?: {
+    skip?: number;
+    limit?: number;
+  }): Promise<ChatHistoryResponse> {
+    const response = await this.client.get<ChatHistoryResponse>('/api/chat/history', {
+      params,
+    });
+    return response.data;
+  }
+
+  getAudioUrl(filename: string): string {
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 
+      (import.meta.env.PROD ? 'https://tastematch-api.fly.dev' : 'http://localhost:8000');
+    return `${API_BASE_URL}/api/chat/audio/${filename}`;
   }
 }
 
