@@ -5,31 +5,140 @@ Utiliza PGVector para armazenamento persistente de embeddings
 
 from typing import List, Optional, Set
 from sqlalchemy.orm import Session
+from sqlalchemy import create_engine, text
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import PGVector
 from langchain_core.documents import Document
+import logging
 
 from app.database.models import Restaurant
 from app.database import crud
 
 # LLM será injetado via LangChain Groq
 
+logger = logging.getLogger(__name__)
+
+
+def validate_database_requirements(connection_string: str, db: Session) -> dict:
+    """
+    Valida requisitos do banco de dados para RAG Service.
+    
+    Verifica:
+    - Se é PostgreSQL (não SQLite)
+    - Se extensão 'vector' está instalada
+    - Se conexão está funcionando
+    
+    Args:
+        connection_string: String de conexão PostgreSQL
+        db: Sessão do banco de dados
+        
+    Returns:
+        dict: Resultado da validação com status e mensagens
+        
+    Raises:
+        ValueError: Se algum requisito não for atendido
+    """
+    errors = []
+    warnings = []
+    
+    # 1. Verificar se é PostgreSQL
+    if "sqlite" in connection_string.lower():
+        errors.append(
+            "PGVector requer PostgreSQL. SQLite não é suportado. "
+            "Configure DATABASE_URL para usar PostgreSQL."
+        )
+        return {"valid": False, "errors": errors, "warnings": warnings}
+    
+    # 2. Verificar conexão ao banco
+    try:
+        # Testar conexão básica
+        result = db.execute(text("SELECT version()"))
+        db_version = result.fetchone()[0]
+        logger.info(f"Conectado ao PostgreSQL: {db_version[:50]}...")
+    except Exception as e:
+        errors.append(
+            f"Não foi possível conectar ao banco de dados: {str(e)}. "
+            "Verifique se DATABASE_URL está correto e se o banco está acessível."
+        )
+        return {"valid": False, "errors": errors, "warnings": warnings}
+    
+    # 3. Verificar extensão vector
+    try:
+        result = db.execute(
+            text("SELECT * FROM pg_extension WHERE extname = 'vector'")
+        )
+        vector_ext = result.fetchone()
+        
+        if vector_ext is None:
+            errors.append(
+                "Extensão 'vector' (pgvector) não está instalada no PostgreSQL. "
+                "Execute no banco: CREATE EXTENSION IF NOT EXISTS vector;"
+            )
+        else:
+            ext_version = vector_ext[5] if len(vector_ext) > 5 else "desconhecida"
+            logger.info(f"Extensão pgvector encontrada: versão {ext_version}")
+            
+    except Exception as e:
+        errors.append(
+            f"Erro ao verificar extensão 'vector': {str(e)}. "
+            "Certifique-se de que está conectado a um banco PostgreSQL válido."
+        )
+    
+    # 4. Verificar se está usando Supabase (detectar automaticamente)
+    is_supabase = "supabase" in connection_string.lower() or "pooler.supabase.com" in connection_string.lower()
+    if is_supabase:
+        logger.info("Detectado banco Supabase - verificando configurações...")
+        
+        # Verificar SSL (Supabase requer SSL)
+        if "sslmode" not in connection_string.lower():
+            warnings.append(
+                "Supabase requer SSL. Adicione '?sslmode=require' à DATABASE_URL ou "
+                "configure DB_PROVIDER=supabase para configurar SSL automaticamente."
+            )
+    
+    return {
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "warnings": warnings,
+        "is_supabase": is_supabase
+    }
+
 
 class RAGService:
     """Serviço RAG usando PGVector para persistência garantida"""
     
-    def __init__(self, db: Session, connection_string: str):
+    def __init__(self, db: Session, connection_string: str, validate: bool = True):
         """
         Inicializa o serviço RAG
         
         Args:
             db: Sessão do banco de dados
             connection_string: String de conexão PostgreSQL para PGVector
+            validate: Se True, valida requisitos do banco antes de inicializar
         """
         self.db = db
         self.connection_string = connection_string
         self.embeddings = None
         self.vector_store = None
+        
+        # Validar requisitos do banco se solicitado
+        if validate:
+            validation = validate_database_requirements(connection_string, db)
+            
+            if not validation["valid"]:
+                error_msg = "Requisitos do banco de dados não atendidos:\n"
+                error_msg += "\n".join(f"  - {err}" for err in validation["errors"])
+                if validation["warnings"]:
+                    error_msg += "\n\nAvisos:\n"
+                    error_msg += "\n".join(f"  - {warn}" for warn in validation["warnings"])
+                
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+            
+            if validation.get("warnings"):
+                for warning in validation["warnings"]:
+                    logger.warning(warning)
+        
         self._initialize_embeddings()
     
     def _initialize_embeddings(self):
@@ -50,30 +159,41 @@ class RAGService:
             collection_name: Nome da coleção no PGVector
         """
         if self.vector_store is None:
-            # Verificar se é PostgreSQL (não SQLite)
-            if "sqlite" in self.connection_string.lower():
-                raise ValueError(
-                    "PGVector requer PostgreSQL. SQLite não é suportado. "
-                    "Configure DATABASE_URL para usar PostgreSQL."
-                )
-            
             try:
+                logger.info(f"Inicializando PGVector com collection: {collection_name}")
                 self.vector_store = PGVector(
                     connection_string=self.connection_string,
                     embedding_function=self.embeddings,
                     collection_name=collection_name,
                     pre_delete_collection=False  # Não deletar coleção existente
                 )
+                logger.info("PGVector inicializado com sucesso")
             except Exception as e:
-                # Se falhar ao criar, pode ser que a extensão vector não esteja instalada
                 error_msg = str(e)
+                logger.error(f"Erro ao inicializar PGVector: {error_msg}", exc_info=True)
+                
+                # Mensagens de erro mais específicas
                 if "vector" in error_msg.lower() or "extension" in error_msg.lower():
                     raise ValueError(
-                        f"Extensão 'vector' não está instalada no PostgreSQL. "
-                        f"Execute: CREATE EXTENSION IF NOT EXISTS vector; "
+                        f"Extensão 'vector' (pgvector) não está instalada ou habilitada no PostgreSQL. "
+                        f"Execute no banco: CREATE EXTENSION IF NOT EXISTS vector; "
                         f"Erro original: {error_msg}"
                     )
-                raise
+                elif "connection" in error_msg.lower() or "timeout" in error_msg.lower():
+                    raise ValueError(
+                        f"Erro de conexão ao banco de dados: {error_msg}. "
+                        f"Verifique se DATABASE_URL está correto e se o banco está acessível."
+                    )
+                elif "authentication" in error_msg.lower() or "password" in error_msg.lower():
+                    raise ValueError(
+                        f"Erro de autenticação: {error_msg}. "
+                        f"Verifique se as credenciais em DATABASE_URL estão corretas."
+                    )
+                else:
+                    raise ValueError(
+                        f"Erro ao inicializar PGVector: {error_msg}. "
+                        f"Verifique se o banco está configurado corretamente."
+                    )
     
     def add_documents(self, documents: List[Document]):
         """

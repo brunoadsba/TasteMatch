@@ -41,12 +41,15 @@ async def chat(
     Rate Limit: 30 requisições por minuto por usuário (respeitando limite Groq API)
     """
     try:
-        logger.info(f"Iniciando chat para usuário {current_user.id} - message: {bool(message)}, audio: {bool(audio)}")
-    except Exception:
-        pass  # Não falhar se logging falhar
+        logger.info(f"Iniciando endpoint /api/chat/ para usuário {current_user.id}")
+        request.state.current_user = current_user
+    except Exception as e:
+        logger.error(f"Erro ao inicializar endpoint /api/chat/: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Erro ao inicializar endpoint de chat"
+        )
     
-    # Adicionar usuário ao request.state para rate limiting
-    request.state.current_user = current_user
     
     # Validar que pelo menos um input foi fornecido
     if not message and not audio:
@@ -177,15 +180,41 @@ async def chat(
     # Obter RAG service
     try:
         connection_string = settings.DATABASE_URL
+        logger.info(f"Inicializando RAG service com connection_string: ...@{connection_string.split('@')[-1] if '@' in connection_string else connection_string[:50]}")
         rag_service = get_rag_service(db, connection_string)
+        logger.info("RAG service inicializado com sucesso")
+    except ValueError as e:
+        # Erros de validação (requisitos não atendidos) - mensagens mais claras
+        error_msg = str(e)
+        logger.error(f"Erro de validação ao inicializar RAG service: {error_msg}")
+        
+        # Retornar mensagem mais amigável ao usuário
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro de configuração do banco de dados: {error_msg}. "
+                   f"Verifique se a extensão pgvector está instalada e se o banco está configurado corretamente."
+        )
     except Exception as e:
         import traceback
         error_traceback = traceback.format_exc()
-        logger.error(f"Erro ao inicializar RAG service: {str(e)}\n{error_traceback}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao inicializar serviço RAG: {str(e)}"
-        )
+        logger.error(f"Erro ao inicializar RAG service: {str(e)}\n{error_traceback}", exc_info=True)
+        
+        # Determinar tipo de erro para mensagem mais específica
+        error_msg = str(e)
+        if "vector" in error_msg.lower() or "extension" in error_msg.lower():
+            detail = (
+                "Extensão pgvector não está instalada no banco de dados. "
+                "Execute: CREATE EXTENSION IF NOT EXISTS vector;"
+            )
+        elif "connection" in error_msg.lower() or "timeout" in error_msg.lower():
+            detail = (
+                "Erro de conexão ao banco de dados. "
+                "Verifique se DATABASE_URL está correto e se o banco está acessível."
+            )
+        else:
+            detail = f"Erro ao inicializar serviço RAG: {error_msg}"
+        
+        raise HTTPException(status_code=500, detail=detail)
     
     # Popular base de conhecimento se estiver vazia
     try:

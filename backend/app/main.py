@@ -87,6 +87,30 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
     
+    # Determinar origem da requisição para CORS
+    # IMPORTANTE: Não podemos usar "*" com allow_credentials=True
+    origin = request.headers.get("origin")
+    headers = {}
+    
+    if origin:
+        # Verificar se a origem está na lista permitida
+        if origin in cors_origins:
+            headers["Access-Control-Allow-Origin"] = origin
+            headers["Access-Control-Allow-Credentials"] = "true"
+        else:
+            # Se origem não está permitida, usar a primeira origem permitida como fallback
+            # Isso garante que o header CORS esteja presente
+            if cors_origins:
+                headers["Access-Control-Allow-Origin"] = cors_origins[0]
+    else:
+        # Se não há origem na requisição, usar primeira origem permitida
+        if cors_origins:
+            headers["Access-Control-Allow-Origin"] = cors_origins[0]
+    
+    # Sempre adicionar headers CORS básicos
+    headers["Access-Control-Allow-Methods"] = "*"
+    headers["Access-Control-Allow-Headers"] = "*"
+    
     # Retornar erro 500 com detalhes (em desenvolvimento) ou mensagem genérica (em produção)
     if settings.DEBUG:
         return JSONResponse(
@@ -94,12 +118,14 @@ async def global_exception_handler(request: Request, exc: Exception):
             content={
                 "detail": f"{type(exc).__name__}: {str(exc)}",
                 "traceback": error_traceback.split('\n') if settings.DEBUG else None
-            }
+            },
+            headers=headers
         )
     else:
         return JSONResponse(
             status_code=500,
-            content={"detail": "Erro interno do servidor"}
+            content={"detail": "Erro interno do servidor"},
+            headers=headers
         )
 
 # Middleware para logging de requisições
