@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
+import logging
 
 from app.database.base import get_db
 from app.api.deps import get_current_user
@@ -17,6 +18,8 @@ from app.core.audio_service import get_audio_service
 from app.core.knowledge_base import update_knowledge_base
 from app.core.rate_limiter import user_limiter
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -37,6 +40,11 @@ async def chat(
     
     Rate Limit: 30 requisições por minuto por usuário (respeitando limite Groq API)
     """
+    try:
+        logger.info(f"Iniciando chat para usuário {current_user.id} - message: {bool(message)}, audio: {bool(audio)}")
+    except Exception:
+        pass  # Não falhar se logging falhar
+    
     # Adicionar usuário ao request.state para rate limiting
     request.state.current_user = current_user
     
@@ -104,6 +112,13 @@ async def chat(
         except HTTPException:
             raise
         except Exception as e:
+            # Log detalhado do erro para debug
+            import traceback
+            error_traceback = traceback.format_exc()
+            logger.error(
+                f"Erro ao processar áudio STT: {type(e).__name__}: {str(e)}\n{error_traceback}",
+                exc_info=True
+            )
             raise HTTPException(
                 status_code=500,
                 detail=f"Erro ao processar áudio: {str(e)}"
@@ -152,25 +167,43 @@ async def chat(
     if not is_valid:
         raise HTTPException(status_code=400, detail=error_message)
     
+    # Validar GROQ_API_KEY
+    if not settings.GROQ_API_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail="GROQ_API_KEY não configurada. Configure no arquivo .env ou variáveis de ambiente."
+        )
+    
     # Obter RAG service
-    connection_string = settings.DATABASE_URL
-    rag_service = get_rag_service(db, connection_string)
+    try:
+        connection_string = settings.DATABASE_URL
+        rag_service = get_rag_service(db, connection_string)
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        logger.error(f"Erro ao inicializar RAG service: {str(e)}\n{error_traceback}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao inicializar serviço RAG: {str(e)}"
+        )
     
     # Popular base de conhecimento se estiver vazia
-    if not rag_service.has_documents():
-        # Verificar se há restaurantes no banco antes de popular
-        from app.database import crud
-        restaurant_count = len(crud.get_restaurants(db, skip=0, limit=1))
-        if restaurant_count > 0:
-            # Popular base com restaurantes e conhecimento estático
-            update_knowledge_base(db, rag_service, user_id=current_user.id)
-        else:
-            # Apenas conhecimento estático se não houver restaurantes
-            update_knowledge_base(db, rag_service, user_id=current_user.id)
-    
-    # Gerar áudio da resposta ANTES de chamar get_chef_response (se necessário)
-    # Por enquanto, não gerar áudio automaticamente (será feito no frontend se necessário)
-    audio_url = None
+    try:
+        if not rag_service.has_documents():
+            # Verificar se há restaurantes no banco antes de popular
+            from app.database import crud
+            restaurant_count = len(crud.get_restaurants(db, skip=0, limit=1))
+            if restaurant_count > 0:
+                # Popular base com restaurantes e conhecimento estático
+                update_knowledge_base(db, rag_service, user_id=current_user.id)
+            else:
+                # Apenas conhecimento estático se não houver restaurantes
+                update_knowledge_base(db, rag_service, user_id=current_user.id)
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        logger.warning(f"Erro ao popular base de conhecimento: {str(e)}\n{error_traceback}")
+        # Não falhar se não conseguir popular, apenas continuar
     
     # Obter resposta do Chef
     try:
@@ -181,7 +214,14 @@ async def chat(
             db=db,
             audio_url=audio_url  # Passar audio_url se houver
         )
+    except HTTPException:
+        # Re-raise HTTP exceptions (já formatadas corretamente)
+        raise
     except Exception as e:
+        # Log completo do erro para debug
+        import traceback
+        error_traceback = traceback.format_exc()
+        logger.error(f"Erro ao gerar resposta do Chef: {str(e)}\n{error_traceback}")
         raise HTTPException(
             status_code=500,
             detail=f"Erro ao gerar resposta: {str(e)}"
@@ -192,13 +232,20 @@ async def chat(
     if audio is not None:
         audio_service = get_audio_service()
         try:
-            # Gerar áudio da resposta usando Edge-TTS
-            audio_path = audio_service.text_to_speech(response["answer"])
+            logger.info(f"Gerando áudio para resposta do usuário {current_user.id}")
+            
+            # Gerar áudio da resposta usando Edge-TTS (versão assíncrona)
+            # Usar versão async diretamente pois estamos em endpoint async
+            audio_path = await audio_service.text_to_speech_async(response["answer"])
+            
+            logger.info(f"Áudio gerado com sucesso: {audio_path}")
             
             # Em produção, fazer upload para storage (S3, Cloudflare R2, etc.) e retornar URL pública
-            # Por enquanto, retornar caminho relativo que será servido pelo endpoint /api/audio/{filename}
+            # Por enquanto, retornar caminho relativo que será servido pelo endpoint /api/chat/audio/{filename}
             audio_filename = Path(audio_path).name
-            audio_url = f"/api/audio/{audio_filename}"
+            audio_url = f"/api/chat/audio/{audio_filename}"
+            
+            logger.info(f"Audio URL gerada: {audio_url}")
             
             # Atualizar última mensagem do assistente com audio_url
             from app.database import crud
@@ -206,12 +253,24 @@ async def chat(
             if recent_messages and recent_messages[0].role == "assistant":
                 recent_messages[0].audio_url = audio_url
                 db.commit()
+                logger.info(f"Audio URL salva no banco de dados para mensagem do assistente")
+            else:
+                logger.warning("Não foi possível encontrar mensagem do assistente para salvar audio_url")
+                
+        except ImportError as e:
+            # Edge-TTS não está instalado
+            logger.error(f"Edge-TTS não está instalado: {str(e)}", exc_info=True)
+            audio_url = None
         except Exception as e:
             # Não falhar se TTS falhar, apenas não incluir áudio
-            # Log do erro para debug (em produção, usar sistema de logging)
-            import logging
-            logging.warning(f"Erro ao gerar áudio da resposta: {str(e)}")
-            pass
+            # Log detalhado do erro para debug
+            import traceback
+            error_traceback = traceback.format_exc()
+            logger.error(
+                f"Erro ao gerar áudio da resposta: {type(e).__name__}: {str(e)}\n{error_traceback}",
+                exc_info=True
+            )
+            audio_url = None  # Garantir que audio_url seja None em caso de erro
     
     return {
         "answer": response["answer"],

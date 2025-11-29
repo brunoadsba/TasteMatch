@@ -26,6 +26,14 @@
 - **[erros-deploy-migracao.md](./erros-deploy-migracao.md)** - Erros encontrados e soluções aplicadas durante deploy e migração
 - **[ANALISE_PENDENCIAS.md](./ANALISE_PENDENCIAS.md)** - Análise geral de pendências do projeto
 
+### Troubleshooting e Correções
+- **[erro500.md](./erro500.md)** - Documentação completa do erro 500 no endpoint /api/chat/
+- **[ANALISE_SOLUCOES_ERRO_500.md](./ANALISE_SOLUCOES_ERRO_500.md)** - Análise comparativa de soluções propostas
+- **[IMPLEMENTACAO_OPCAO_C.md](./IMPLEMENTACAO_OPCAO_C.md)** - Implementação da solução híbrida
+- **[CORRECAO_PATCH_CLIENTE_GROQ.md](./CORRECAO_PATCH_CLIENTE_GROQ.md)** - Correção do patch do cliente Groq
+- **[SOLUCAO_ERRO_AUDIO_GROQ.md](./SOLUCAO_ERRO_AUDIO_GROQ.md)** - Solução do erro de áudio (versão SDK)
+- **[CORRECAO_AUDIO.md](./CORRECAO_AUDIO.md)** - Correções de áudio (caminho, async, etc.)
+
 ### Manutenção
 - **[LIMPEZA_EXECUTADA.md](./LIMPEZA_EXECUTADA.md)** - Documentação da limpeza profissional executada
 
@@ -67,7 +75,13 @@ Docs/
 ├── licoes-aprendidas.md
 ├── erros-deploy-migracao.md
 ├── ANALISE_PENDENCIAS.md
-└── LIMPEZA_EXECUTADA.md
+├── LIMPEZA_EXECUTADA.md
+├── erro500.md
+├── ANALISE_SOLUCOES_ERRO_500.md
+├── IMPLEMENTACAO_OPCAO_C.md
+├── CORRECAO_PATCH_CLIENTE_GROQ.md
+├── SOLUCAO_ERRO_AUDIO_GROQ.md
+└── CORRECAO_AUDIO.md
 ```
 
 ---
@@ -75,7 +89,8 @@ Docs/
 ## 🔄 Atualizações
 
 **Última atualização**: 29/11/2025  
-**Limpeza de documentação**: Concluída
+**Limpeza de documentação**: Concluída  
+**Correções de áudio e chat**: Documentadas (29/11/2025)
 
 ---
 

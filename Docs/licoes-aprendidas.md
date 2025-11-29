@@ -938,7 +938,125 @@ docker run --rm tastematch-test python -c "import slowapi; import langchain; ...
 
 ---
 
+## 🎤 Áudio e Chat
+
+### Problema: Erro 500 no endpoint /api/chat/ - reasoning_format
+
+**Erro:**
+```
+TypeError: Completions.create() got an unexpected keyword argument 'reasoning_format'
+```
+
+**Causa:** A versão `langchain-groq==0.3.3` tenta passar parâmetros de reasoning (`reasoning_format`, `reasoning_effort`) para modelos que não suportam (como `llama-3.1-8b-instant`). Esses parâmetros são para modelos de reasoning como DeepSeek R1.
+
+**Solução:**
+1. Criar wrapper `ChatGroqFiltered` que intercepta chamadas ao cliente Groq
+2. Aplicar monkey patch no método `self.client.create()` (não em `self.client.chat.completions.create()`)
+3. Filtrar parâmetros não suportados antes da requisição HTTP
+
+**Implementação:**
+```python
+class ChatGroqFiltered(ChatGroq):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._apply_client_patch()
+    
+    def _apply_client_patch(self):
+        if hasattr(self.client, 'create'):
+            original_create = self.client.create
+            def filtered_create(*args, **kwargs):
+                for param in ['reasoning_format', 'reasoning_effort']:
+                    kwargs.pop(param, None)
+                return original_create(*args, **kwargs)
+            self.client.create = filtered_create
+```
+
+**Lição:** 
+- Interceptar no último momento possível (cliente Groq) garante que parâmetros sejam removidos independente de onde foram adicionados
+- `self.client` já é `groq.resources.chat.completions.Completions`, não o cliente completo
+- Monkey patch no método correto é essencial
+
+---
+
+### Problema: 'Groq' object has no attribute 'audio'
+
+**Erro:**
+```
+'Groq' object has no attribute 'audio'
+Exception: Erro na API Groq ao transcrever áudio: 'Groq' object has no attribute 'audio'
+```
+
+**Causa:** Versão do `groq` SDK muito antiga (`0.4.1`) não tinha suporte para API de áudio (transcriptions). A versão mais recente é `0.36.0`.
+
+**Solução:**
+1. Atualizar `groq` de `0.4.1` para `0.36.0`
+2. Verificar que a API de áudio está disponível: `client.audio.transcriptions`
+
+**Verificação:**
+```python
+client = groq.Groq(api_key='...')
+hasattr(client, 'audio')  # True na versão 0.36.0
+client.audio.transcriptions  # Disponível
+```
+
+**Lição:** 
+- Sempre verificar versões de SDKs quando APIs não estão disponíveis
+- Usar `pip index versions <package>` para ver versões disponíveis
+- Versões muito antigas podem não ter features mais recentes
+
+---
+
+### Problema: Caminho incorreto do endpoint de áudio
+
+**Erro:** Arquivos de áudio não eram servidos corretamente.
+
+**Causa:** O código gerava URLs como `/api/audio/{filename}`, mas o endpoint está registrado em `/api/chat/audio/{filename}` (router tem prefixo `/api/chat`).
+
+**Solução:**
+```python
+# Antes (incorreto)
+audio_url = f"/api/audio/{audio_filename}"
+
+# Depois (correto)
+audio_url = f"/api/chat/audio/{audio_filename}"
+```
+
+**Lição:** Sempre considerar o prefixo do router ao gerar URLs de endpoints.
+
+---
+
+### Problema: asyncio.run() dentro de endpoint async
+
+**Erro:** Conflito ao usar `text_to_speech()` (síncrono) que internamente usa `asyncio.run()` dentro de endpoint async.
+
+**Causa:** Endpoints async já rodam em loop de eventos. `asyncio.run()` tenta criar novo loop, causando conflito.
+
+**Solução:** Usar versão assíncrona diretamente:
+```python
+# Antes (causa conflito)
+audio_path = audio_service.text_to_speech(response["answer"])
+
+# Depois (correto)
+audio_path = await audio_service.text_to_speech_async(response["answer"])
+```
+
+**Lição:** 
+- Nunca usar `asyncio.run()` dentro de código que já está em contexto async
+- Sempre usar versões async diretamente quando disponíveis
+
+---
+
+### Resumo das Lições de Áudio e Chat
+
+1. **Interceptar no último momento** - Monkey patch no cliente Groq garante remoção de parâmetros
+2. **Verificar versões de SDK** - APIs podem não estar disponíveis em versões antigas
+3. **Considerar prefixos de router** - URLs devem incluir prefixo completo do router
+4. **Evitar asyncio.run() em contexto async** - Usar versões async diretamente
+5. **Logging detalhado** - Facilita identificar problemas rapidamente
+
+---
+
 **Última atualização:** 29/11/2025  
 **Projeto:** TasteMatch - Agente de Recomendação Inteligente  
-**Fase:** 15 - Migração Supabase Concluída ✅
+**Fase:** 16 - Correções de Áudio e Chat ✅
 

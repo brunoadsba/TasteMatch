@@ -531,6 +531,67 @@ Migrar banco de dados PostgreSQL do Fly.io Postgres para Supabase, mantendo apen
 
 ---
 
+## 🎤 SPRINT 7: Correções de Áudio e Chat (29/11/2025)
+
+### Objetivo
+Corrigir erros 500 no endpoint `/api/chat/` e problemas com processamento de áudio.
+
+### Problemas Resolvidos
+
+#### 1. Erro 500 - reasoning_format
+- **Erro:** `TypeError: Completions.create() got an unexpected keyword argument 'reasoning_format'`
+- **Causa:** `langchain-groq==0.3.3` passa parâmetros não suportados para modelos básicos
+- **Solução:** Wrapper `ChatGroqFiltered` com monkey patch no cliente Groq
+- **Status:** ✅ Resolvido
+
+#### 2. Erro 500 - API de áudio não disponível
+- **Erro:** `'Groq' object has no attribute 'audio'`
+- **Causa:** Versão `groq==0.4.1` muito antiga, sem suporte para API de áudio
+- **Solução:** Atualizado para `groq==0.36.0`
+- **Status:** ✅ Resolvido
+
+#### 3. Caminho incorreto do endpoint de áudio
+- **Erro:** Arquivos de áudio não eram servidos
+- **Causa:** URL gerada como `/api/audio/` mas endpoint é `/api/chat/audio/`
+- **Solução:** Corrigido caminho para incluir prefixo do router
+- **Status:** ✅ Resolvido
+
+#### 4. Conflito asyncio.run() em contexto async
+- **Erro:** Conflito ao usar `text_to_speech()` síncrono em endpoint async
+- **Causa:** `asyncio.run()` não pode ser usado dentro de loop já em execução
+- **Solução:** Usar `text_to_speech_async()` diretamente
+- **Status:** ✅ Resolvido
+
+### Arquivos Modificados
+- `backend/app/core/chef_chat.py` - Wrapper ChatGroqFiltered com monkey patch
+- `backend/app/api/routes/chat.py` - Correções de áudio e logging
+- `backend/app/core/audio_service.py` - Código já estava correto
+- `backend/requirements.txt` - Atualizado `groq==0.36.0`
+- `backend/app/main.py` - Handler global de exceções (já existia)
+
+### Melhorias Implementadas
+- ✅ Logging detalhado em pontos críticos
+- ✅ Tratamento de erros robusto
+- ✅ Monkey patch no cliente Groq (interceptação no último momento)
+- ✅ Versão atualizada do SDK Groq
+
+### Status
+- ✅ Erro 500 no chat resolvido
+- ✅ Processamento de áudio funcionando
+- ✅ Geração de áudio da resposta funcionando
+- ✅ Endpoint de áudio servindo arquivos corretamente
+
+### Documentação Criada
+- `Docs/erro500.md` - Documento completo do erro
+- `Docs/ANALISE_SOLUCOES_ERRO_500.md` - Análise comparativa de soluções
+- `Docs/IMPLEMENTACAO_OPCAO_C.md` - Implementação da solução
+- `Docs/CORRECAO_PATCH_CLIENTE_GROQ.md` - Correção do patch
+- `Docs/CORRECAO_AUDIO.md` - Correções de áudio
+- `Docs/SOLUCAO_ERRO_AUDIO_GROQ.md` - Solução do erro de áudio
+- `Docs/DEBUG_ERRO_AUDIO_500.md` - Guia de debug
+
+---
+
 **Última atualização:** 29/11/2025  
-**Status:** ✅ MVP Completo + Onboarding + Deploy + Mobile-First + Testes E2E + **Migração Supabase Concluída**
+**Status:** ✅ MVP Completo + Onboarding + Deploy + Mobile-First + Testes E2E + Migração Supabase + **Correções de Áudio e Chat**
 

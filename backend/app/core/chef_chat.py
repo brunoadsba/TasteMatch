@@ -12,12 +12,126 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from langchain_groq import ChatGroq
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import BaseMessage
+from typing import Any, Dict, List, Optional
 from app.config import settings
 from app.core.rag_service import RAGService
 from app.core.recommender import extract_user_patterns, generate_recommendations
 from app.core.prompt_versions import get_prompt_version_for_user
 from app.core.llm_monitoring import LLMMonitoringCallback, log_llm_metrics
 from app.database import crud
+
+
+class ChatGroqFiltered(ChatGroq):
+    """
+    Wrapper robusto que intercepta chamadas ao cliente Groq para remover
+    parâmetros não suportados (reasoning_format, reasoning_effort).
+    
+    Esta solução funciona interceptando no último momento possível (cliente Groq),
+    garantindo que nenhum parâmetro não suportado chegue à API.
+    
+    Estratégia: Monkey patch no cliente + override em _generate para defense in depth.
+    """
+    
+    def __init__(self, *args, **kwargs):
+        """Inicializa o wrapper e aplica patch no cliente Groq."""
+        super().__init__(*args, **kwargs)
+        self._apply_client_patch()
+    
+    def _apply_client_patch(self):
+        """
+        Aplica patch no cliente Groq para filtrar parâmetros não suportados.
+        
+        Intercepta no nível do cliente (antes da requisição HTTP), garantindo
+        que parâmetros problemáticos sejam removidos independente de onde foram
+        adicionados no fluxo do LangChain.
+        
+        Nota: self.client já é groq.resources.chat.completions.Completions,
+        então fazemos patch diretamente em self.client.create()
+        """
+        try:
+            # Verificar se cliente existe e tem método create
+            if not hasattr(self, 'client'):
+                return
+            
+            if not hasattr(self.client, 'create'):
+                return
+            
+            # Guardar referência do método original
+            original_create = self.client.create
+            
+            # Wrapper que remove parâmetros problemáticos
+            def filtered_create(*args, **kwargs):
+                """
+                Wrapper que filtra parâmetros não suportados antes de chamar API Groq.
+                
+                Lista de parâmetros não suportados pelo modelo llama-3.1-8b-instant:
+                - reasoning_format: Parâmetro para modelos de reasoning (DeepSeek R1, etc)
+                - reasoning_effort: Esforço de reasoning (não suportado em modelos básicos)
+                """
+                # Lista de parâmetros não suportados pelo modelo
+                unsupported_params = ['reasoning_format', 'reasoning_effort']
+                
+                # Remover silenciosamente (sem log para evitar poluição)
+                for param in unsupported_params:
+                    kwargs.pop(param, None)
+                
+                # Chamar método original com kwargs limpos
+                return original_create(*args, **kwargs)
+            
+            # Aplicar patch diretamente no método create do cliente
+            self.client.create = filtered_create
+            
+            # Também fazer patch no async_client se existir
+            if hasattr(self, 'async_client') and hasattr(self.async_client, 'create'):
+                original_async_create = self.async_client.create
+                
+                async def filtered_async_create(*args, **kwargs):
+                    """Wrapper async que também filtra parâmetros não suportados."""
+                    unsupported_params = ['reasoning_format', 'reasoning_effort']
+                    for param in unsupported_params:
+                        kwargs.pop(param, None)
+                    return await original_async_create(*args, **kwargs)
+                
+                self.async_client.create = filtered_async_create
+                
+        except Exception as e:
+            # Log mas não falhar - se patch falhar, tentar continuar sem patch
+            # O override em _generate ainda pode ajudar
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"Erro ao aplicar patch no cliente Groq: {e}. "
+                "Tentando continuar com override em _generate apenas."
+            )
+    
+    def _generate(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[Any] = None,
+        **kwargs: Any,
+    ) -> Any:
+        """
+        Override adicional como camada extra de segurança (defense in depth).
+        
+        Remove parâmetros problemáticos também neste nível, caso o patch
+        no cliente não tenha sido aplicado ou tenha falhado.
+        """
+        # Limpeza redundante (defense in depth)
+        unsupported_params = ['reasoning_format', 'reasoning_effort']
+        
+        # Remover dos kwargs
+        for param in unsupported_params:
+            kwargs.pop(param, None)
+        
+        # Também limpar model_kwargs se existir
+        if hasattr(self, 'model_kwargs') and self.model_kwargs:
+            for param in unsupported_params:
+                self.model_kwargs.pop(param, None)
+        
+        return super()._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
 
 
 def create_chef_prompt_template(
@@ -326,14 +440,23 @@ def create_chef_chain(
     Returns:
         Chain configurada usando LCEL
     """
-    # Obter LLM usando LangChain Groq
+    # Validar GROQ_API_KEY antes de criar LLM
+    if not settings.GROQ_API_KEY:
+        raise ValueError(
+            "GROQ_API_KEY não configurada. Configure no arquivo .env ou variáveis de ambiente."
+        )
+    
+    # Obter LLM usando LangChain Groq com wrapper que filtra parâmetros não suportados
     # Usar modelo Llama mais antigo e estável que não envia reasoning_effort/reasoning_format
     # llama-3.1-8b-instant é mais estável e não tem esses problemas
-    llm = ChatGroq(
-        groq_api_key=settings.GROQ_API_KEY,
-        model="llama-3.1-8b-instant",  # Modelo estável, sem problemas de reasoning params
-        temperature=0.5  # Temperatura mais baixa para respostas mais diretas e objetivas
-    )
+    try:
+        llm = ChatGroqFiltered(
+            groq_api_key=settings.GROQ_API_KEY,
+            model="llama-3.1-8b-instant",  # Modelo estável, sem problemas de reasoning params
+            temperature=0.5  # Temperatura mais baixa para respostas mais diretas e objetivas
+        )
+    except Exception as e:
+        raise ValueError(f"Erro ao criar ChatGroq: {str(e)}")
     
     # Obter preferências e padrões do usuário
     user_preferences = None

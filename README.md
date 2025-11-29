@@ -45,7 +45,7 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 - ✅ **CORS:** 100% corrigido (URL da API detecta ambiente automaticamente)
 - ✅ **Mobile-First:** 100% completo (design responsivo, menu hambúrguer, viewports dinâmicos)
 - ✅ **Testes E2E:** 100% completo (Playwright, 50 testes, 0 falhas)
-- ✅ **Chef Virtual:** 95% completo (RAG, STT/TTS, monitoramento LLM, testes E2E)
+- ✅ **Chef Virtual:** 100% completo (RAG, STT/TTS, monitoramento LLM, testes E2E, correções de áudio)
 
 ### Tecnologias Principais
 
@@ -56,7 +56,7 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 - JWT para autenticação
 - Bcrypt para hash de senhas
 - LangChain 0.3+ (RAG, LLM integration)
-- Groq API (LLM, Whisper STT)
+- Groq API (LLM, Whisper STT) - SDK 0.36.0
 - Edge-TTS (text-to-speech)
 
 **IA/ML:**
@@ -505,7 +505,15 @@ Este é um projeto de demonstração técnica. Para desenvolvimento:
 
 ## 📝 Notas de Versão
 
-**v1.0.0 (Atual)** - MVP Funcional:
+**v1.0.1 (29/11/2025)** - Correções de Áudio e Chat:
+- ✅ Corrigido erro 500 no endpoint `/api/chat/` (reasoning_format)
+- ✅ Atualizado Groq SDK de 0.4.1 para 0.36.0 (suporte a API de áudio)
+- ✅ Corrigido caminho do endpoint de áudio (`/api/chat/audio/`)
+- ✅ Corrigido conflito asyncio em contexto async
+- ✅ Melhorado logging e tratamento de erros
+- ✅ Wrapper ChatGroqFiltered com monkey patch robusto
+
+**v1.0.0 (Anterior)** - MVP Funcional:
 - ✅ Backend completo com FastAPI
 - ✅ Sistema de recomendações com embeddings
 - ✅ Integração GenAI (Groq API)

@@ -5,9 +5,11 @@ Main application entry point.
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from datetime import datetime
 import time
 import os
+import traceback
 from app.config import settings
 from app.core.logging_config import setup_logging, get_logger
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -67,32 +69,90 @@ app.add_middleware(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Handler global para capturar exceções não tratadas
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Handler global para capturar todas as exceções não tratadas."""
+    import traceback
+    error_traceback = traceback.format_exc()
+    
+    # Log completo do erro
+    logger.error(
+        f"Erro não tratado: {type(exc).__name__}: {str(exc)}",
+        exc_info=True,
+        extra={
+            "endpoint": str(request.url.path),
+            "method": request.method,
+            "traceback": error_traceback
+        }
+    )
+    
+    # Retornar erro 500 com detalhes (em desenvolvimento) ou mensagem genérica (em produção)
+    if settings.DEBUG:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": f"{type(exc).__name__}: {str(exc)}",
+                "traceback": error_traceback.split('\n') if settings.DEBUG else None
+            }
+        )
+    else:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Erro interno do servidor"}
+        )
+
 # Middleware para logging de requisições
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     """Middleware para logar todas as requisições HTTP."""
     start_time = time.time()
     
-    # Executar requisição
-    response = await call_next(request)
-    
-    # Calcular duração
-    duration_ms = (time.time() - start_time) * 1000
-    
-    # Log da requisição
-    extra = {
-        "endpoint": str(request.url.path),
-        "method": request.method,
-        "status_code": response.status_code,
-        "duration_ms": round(duration_ms, 2),
-    }
-    
-    logger.info(
-        f"{request.method} {request.url.path} - {response.status_code}",
-        extra=extra
-    )
-    
-    return response
+    try:
+        # Executar requisição
+        response = await call_next(request)
+        
+        # Calcular duração
+        duration_ms = (time.time() - start_time) * 1000
+        
+        # Log da requisição
+        extra = {
+            "endpoint": str(request.url.path),
+            "method": request.method,
+            "status_code": response.status_code,
+            "duration_ms": round(duration_ms, 2),
+        }
+        
+        # Log de erro se status >= 500
+        if response.status_code >= 500:
+            logger.error(
+                f"{request.method} {request.url.path} - {response.status_code}",
+                extra=extra
+            )
+        else:
+            logger.info(
+                f"{request.method} {request.url.path} - {response.status_code}",
+                extra=extra
+            )
+        
+        return response
+    except Exception as e:
+        # Capturar exceções não tratadas pelo handler global
+        import traceback
+        error_traceback = traceback.format_exc()
+        duration_ms = (time.time() - start_time) * 1000
+        
+        logger.error(
+            f"Exceção não tratada no middleware: {type(e).__name__}: {str(e)}",
+            exc_info=True,
+            extra={
+                "endpoint": str(request.url.path),
+                "method": request.method,
+                "duration_ms": round(duration_ms, 2),
+                "traceback": error_traceback
+            }
+        )
+        raise  # Re-raise para o handler global capturar
 
 
 # Middleware para adicionar headers HTTP Cache-Control
