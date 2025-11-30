@@ -30,7 +30,7 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 - **Raciocínio do Chef**: modal com explicação detalhada do porquê daquela escolha, baseada no perfil do usuário
 - **Simulador de Pedidos**: quick personas (Vida Saudável, Comfort Food, Gourmet) e modo manual para criar pedidos simulados
 - **Terminal de Raciocínio da IA**: terminal visual que mostra passo a passo como o sistema atualiza o perfil e recalcula recomendações
-- **🤖 Chef Virtual**: chatbot conversacional com RAG, suporte a áudio (STT/TTS), e monitoramento completo de métricas LLM
+- **🤖 Chef Virtual**: chatbot conversacional com RAG, suporte a áudio (STT/TTS), monitoramento completo de métricas LLM, filtro semântico rigoroso para recomendações precisas, e detecção inteligente de interações sociais
 
 ### Status do Projeto
 
@@ -45,7 +45,7 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 - ✅ **CORS:** 100% corrigido (URL da API detecta ambiente automaticamente)
 - ✅ **Mobile-First:** 100% completo (design responsivo, menu hambúrguer, viewports dinâmicos)
 - ✅ **Testes E2E:** 100% completo (Playwright, 50 testes, 0 falhas)
-- ✅ **Chef Virtual:** 100% completo (RAG, STT/TTS, monitoramento LLM, testes E2E, correções de áudio)
+- ✅ **Chef Virtual:** 100% completo (RAG, STT/TTS, monitoramento LLM, testes E2E, correções de áudio, filtro semântico rigoroso, interações sociais inteligentes)
 
 ### Tecnologias Principais
 
@@ -83,11 +83,39 @@ O **TasteMatch** é um agente de recomendação inteligente que:
 
 ## 🚀 Início Rápido
 
+### ⚠️ Importante: 3 Pilares para Rodar Localmente
+
+A aplicação TasteMatch requer **3 componentes rodando simultaneamente** para funcionar corretamente:
+
+1. **Frontend** (React + Vite) - Interface do usuário
+2. **Backend** (FastAPI) - API e lógica de negócio
+3. **Banco de Dados** (PostgreSQL) - Armazenamento de dados
+
+**⚠️ Se o banco de dados não estiver inicializado, o sistema não funcionará corretamente e retornará erros 500.**
+
+#### Iniciando o Banco de Dados (Docker)
+
+Se você usa Docker para o banco de dados local:
+
+```bash
+# Verificar se o container está rodando
+docker ps | grep tastematch-postgres
+
+# Se não estiver rodando, iniciar o container
+docker start tastematch-postgres
+
+# Verificar status
+docker ps | grep tastematch-postgres
+```
+
+**Nota:** O container `tastematch-postgres` deve estar com status `Up` para que a aplicação funcione.
+
 ### Pré-requisitos
 
 - Python 3.11+
 - Node.js 18+ e npm
 - Git
+- Docker (para banco de dados local) ou PostgreSQL instalado
 
 ### Instalação e Configuração
 
@@ -130,6 +158,27 @@ nano .env  # ou use seu editor preferido
 
 #### 4. Inicialize o Banco de Dados
 
+**⚠️ IMPORTANTE:** Certifique-se de que o PostgreSQL está rodando antes de executar os comandos abaixo.
+
+**Se usar Docker:**
+```bash
+# Iniciar container do PostgreSQL (se ainda não estiver rodando)
+docker start tastematch-postgres
+
+# Verificar se está rodando
+docker ps | grep tastematch-postgres
+```
+
+**Se usar PostgreSQL local:**
+```bash
+# Verificar se o serviço está rodando (Linux)
+sudo systemctl status postgresql
+
+# Ou iniciar o serviço
+sudo systemctl start postgresql
+```
+
+**Aplicar migrations e popular dados:**
 ```bash
 cd backend
 
@@ -504,6 +553,14 @@ Este é um projeto de demonstração técnica. Para desenvolvimento:
 ---
 
 ## 📝 Notas de Versão
+
+**v1.0.2 (Atual)** - Melhorias do Chef Virtual:
+- ✅ **Filtro Semântico Rigoroso**: Previne recomendações incorretas (ex: não recomenda "Casa do Pão de Queijo" para "hamburguer gourmet")
+- ✅ **Detecção de Interações Sociais**: Responde adequadamente a cumprimentos ("oi", "tudo bem?") e perguntas sobre identidade ("qual seu nome?")
+- ✅ **Formatação de Respostas Melhorada**: Remove texto verboso, artefatos de markdown e metadados técnicos
+- ✅ **Histórico de Conversa Inteligente**: Foca apenas na pergunta atual, não continua conversas de contextos anteriores
+- ✅ **Limpeza de Artefatos**: Remove emojis soltos, texto introdutório desnecessário e descrições duplicadas
+- ✅ **Respostas Fluidas**: Interações sociais são detectadas e respondidas de forma natural, sem gerar recomendações desnecessárias
 
 **v1.0.1 (29/11/2025)** - Correções de Áudio e Chat:
 - ✅ Corrigido erro 500 no endpoint `/api/chat/` (reasoning_format)

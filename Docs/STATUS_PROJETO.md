@@ -531,6 +531,43 @@ Migrar banco de dados PostgreSQL do Fly.io Postgres para Supabase, mantendo apen
 
 ---
 
+## 🎯 SPRINT 8: Melhorias de Inteligência e Formatação do Chef Virtual (29/11/2025)
+
+Melhorias críticas no Chef Virtual para tornar o agente mais inteligente, preciso e com respostas bem formatadas.
+
+### Problemas Resolvidos
+
+1. **Filtro Semântico Muito Permissivo**
+   - **Problema:** Recomendava restaurantes irrelevantes (ex: "Casa do Pão de Queijo" para "hamburguer gourmet")
+   - **Solução:** Filtro rigoroso que remove palavras genéricas, usa apenas tags principais do mapeamento, e valida correspondência em keywords, nome e descrição
+
+2. **Agente Continuava Conversas Antigas**
+   - **Problema:** Histórico muito extenso fazia agente responder perguntas antigas
+   - **Solução:** Histórico limitado (4 mensagens padrão, 2 para comida, 0 para cumprimentos), filtro de relevância, e instruções explícitas no prompt
+
+3. **Recomendações para Cumprimentos**
+   - **Problema:** "oi" e "tudo bem?" geravam recomendações de restaurantes
+   - **Solução:** Detecção de interações sociais antes de buscar RAG, respostas simples e diretas
+
+4. **Formatação com Artefatos e Texto Verboso**
+   - **Problema:** Respostas continham texto introdutório verboso, descrições duplicadas, emojis soltos e metadados técnicos
+   - **Solução:** Limpeza agressiva de artefatos, remoção destrutiva de descrições, pós-processamento sempre aplicado com lógica invertida
+
+### Arquivos Modificados
+
+- `backend/app/core/chef_chat.py` - Filtro semântico rigoroso, detecção de interações sociais, histórico inteligente
+- `backend/app/core/format_response.py` - Limpeza de artefatos, remoção destrutiva, formatação visual melhorada
+
+### Resultados
+
+- ✅ Filtro semântico previne recomendações incorretas
+- ✅ Interações sociais respondidas adequadamente
+- ✅ Histórico foca apenas na pergunta atual
+- ✅ Formatação limpa e profissional
+- ✅ Respostas fluidas e inteligentes
+
+---
+
 ## 🎤 SPRINT 7: Correções de Áudio e Chat (29/11/2025)
 
 ### Objetivo
@@ -593,5 +630,5 @@ Corrigir erros 500 no endpoint `/api/chat/` e problemas com processamento de áu
 ---
 
 **Última atualização:** 29/11/2025  
-**Status:** ✅ MVP Completo + Onboarding + Deploy + Mobile-First + Testes E2E + Migração Supabase + **Correções de Áudio e Chat**
+**Status:** ✅ MVP Completo + Onboarding + Deploy + Mobile-First + Testes E2E + Migração Supabase + Correções de Áudio e Chat + **Melhorias de Inteligência e Formatação do Chef Virtual**
 

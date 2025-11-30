@@ -1056,7 +1056,191 @@ audio_path = await audio_service.text_to_speech_async(response["answer"])
 
 ---
 
+---
+
+## 🎯 Chef Virtual - Melhorias de Inteligência e Formatação
+
+### Problema: Filtro Semântico Muito Permissivo
+
+**Contexto:** O sistema recomendava restaurantes irrelevantes (ex: "Casa do Pão de Queijo" para "hamburguer gourmet").
+
+**Causa:**
+- Palavras genéricas como "gourmet", "bom", "melhor" eram tratadas como tags
+- Stopwords como "quero", "um", "uma" estavam sendo incluídas no processamento
+- Correspondência parcial usava todas as palavras, não apenas tags principais
+- Verificações de nome e descrição não eram restritivas o suficiente
+
+**Solução:**
+1. **Filtro de Stopwords Expandido:**
+   ```python
+   stopwords = {'quero', 'queria', 'gostaria', 'preciso', 'um', 'uma', 'uns', 'umas', 
+                'o', 'a', 'os', 'as', 'de', 'da', 'do', 'das', 'dos', 'em', 'na', 'no', 
+                'nas', 'nos', 'para', 'com', 'sem', 'por', 'sobre'}
+   ```
+
+2. **Remoção de Palavras Genéricas:**
+   ```python
+   generic_words = {'gourmet', 'bom', 'melhor', 'melhores', 'ótimo', 'otimo', 
+                    'excelente', 'top', 'show'}
+   # Não são mais tratadas como tags
+   ```
+
+3. **Correspondência Parcial Restritiva:**
+   - Apenas tags principais do mapeamento (ex: 'hamburguer' → ['hamburguer', 'burger', 'hamburgueria'])
+   - Não usa palavras genéricas para match parcial
+   - Verificações de nome e descrição também usam apenas tags principais
+
+**Lição:** 
+- Filtros semânticos devem ser rigorosos para evitar recomendações incorretas
+- Palavras genéricas não devem ser tratadas como tags específicas
+- Sempre usar apenas tags principais do mapeamento para correspondência parcial
+
+---
+
+### Problema: Agente Continuava Conversas de Contextos Anteriores
+
+**Contexto:** O agente respondia perguntas antigas do histórico ao invés de focar na pergunta atual.
+
+**Causa:**
+- Histórico muito extenso (10 mensagens) sem filtro
+- Prompt não instruía explicitamente para focar apenas na pergunta atual
+- Histórico era usado mesmo para cumprimentos simples
+
+**Solução:**
+1. **Limitação de Histórico:**
+   - Reduzido de 10 para 4 mensagens (padrão)
+   - Para perguntas sobre comida: apenas 2 mensagens (última interação)
+   - Para cumprimentos: histórico vazio (0 mensagens)
+
+2. **Filtro Inteligente de Histórico:**
+   ```python
+   # Detectar cumprimentos curtos
+   short_greetings = ['oi', 'olá', 'ola', 'hey', 'hi', 'tudo bem', 'tudo bom']
+   if is_short_greeting:
+       return []  # Sem histórico para cumprimentos
+   
+   # Para perguntas sobre comida, incluir apenas última interação
+   if i < 2:  # Apenas última pergunta + resposta
+       relevant_messages.append(msg)
+   ```
+
+3. **Instruções Explícitas no Prompt:**
+   - "⚠️ FOQUE APENAS NA PERGUNTA ATUAL"
+   - "NÃO continue conversas anteriores do histórico"
+   - "Histórico (apenas referência - IGNORE se não relevante)"
+
+**Lição:**
+- Histórico deve ser limitado e filtrado por relevância
+- Instruções explícitas no prompt são essenciais para modelos menores
+- Cumprimentos não devem usar histórico para evitar continuar conversas antigas
+
+---
+
+### Problema: Agente Gerava Recomendações para Cumprimentos
+
+**Contexto:** Quando usuário enviava "oi" ou "tudo bem?", o agente gerava recomendações de restaurantes.
+
+**Causa:**
+- `detect_social_interaction()` não era chamada antes da busca RAG
+- Busca RAG era executada mesmo para cumprimentos
+- Respostas eram muito verbosas e mencionavam restaurantes
+
+**Solução:**
+1. **Chamada Antecipada de Detecção Social:**
+   ```python
+   # CRÍTICO: Detectar interações sociais ANTES de buscar RAG
+   social_response = detect_social_interaction(question)
+   if social_response:
+       return {"answer": social_response, ...}  # Retorna imediatamente
+   ```
+
+2. **Respostas Simplificadas:**
+   - "Olá! Em que posso ajudar?"
+   - "Oi! Como posso ajudar?"
+   - Não menciona restaurantes na resposta inicial
+
+3. **Detecção de Perguntas sobre Identidade:**
+   ```python
+   identity_keywords = [
+       "qual seu nome", "qual é seu nome", "quem é você",
+       "como você se chama", "você é quem"
+   ]
+   # Resposta: "Sou o Chef Virtual! Quer que eu recomende algo?"
+   ```
+
+**Lição:**
+- Detectar interações sociais antes de qualquer processamento pesado
+- Respostas sociais devem ser simples e diretas
+- Não gerar recomendações para interações que não pedem recomendações
+
+---
+
+### Problema: Formatação de Respostas com Artefatos e Texto Verboso
+
+**Contexto:** Respostas continham texto introdutório verboso ("Churrasco é um prato delicioso..."), descrições duplicadas, emojis soltos e metadados técnicos.
+
+**Causa:**
+- LLM (llama-3.1-8b-instant) não seguia consistentemente instruções de formatação
+- Pós-processamento não removia todos os artefatos
+- Metadados técnicos do RAG vazavam para a resposta final
+
+**Solução:**
+1. **Limpeza Agressiva de Artefatos:**
+   ```python
+   # Remover texto introdutório verboso
+   verbose_patterns = [
+       r'(?i)^.*?churrasco\s+é\s+um\s+prato[^.!?]*!?\s*',
+       r'(?i)^.*?posso\s+sugerir[^.]*\.\s*',
+       r'📄\s+visitar[^.]*\.\s*',
+   ]
+   
+   # Remover emojis soltos
+   text = re.sub(r'^\s*[🔥🍝🍣🍔🍕🌮🥙🦞⭐]\s*$', '', text, flags=re.MULTILINE)
+   ```
+
+2. **Remoção Destrutiva de Descrições:**
+   ```python
+   # Remover descrições longas do LLM antes de inserir cards formatados
+   pattern = rf"{name_var}\s+(é|é um|é uma|tem|oferece|clássico)[^.!?]*[.!?]?\s*[🔥⭐]*.*?(?=\n\n|━━|\d+\.\d+/\d+\.\d+|$)"
+   cleaned_answer = re.sub(pattern, "", cleaned_answer)
+   ```
+
+3. **Limpeza de Metadados Técnicos:**
+   ```python
+   # Remover padrões técnicos que vazam do RAG
+   technical_patterns = [
+       r'Restaurante:\s*',
+       r'Tipo de culinária:\s*',
+       r'Tags e pratos relacionados:\s*',
+   ]
+   ```
+
+4. **Pós-processamento Sempre Aplicado:**
+   - Lógica invertida: "na dúvida, reformate"
+   - Validação estrutural estrita
+   - Se estrutura não é perfeita, aplica formatação visual
+
+**Lição:**
+- Modelos menores precisam de pós-processamento robusto
+- Remoção destrutiva é necessária para garantir qualidade
+- Metadados técnicos devem ser removidos antes e depois do pós-processamento
+- Lógica invertida ("na dúvida, reformate") garante qualidade consistente
+
+---
+
+### Resumo das Lições do Chef Virtual
+
+1. **Filtro semântico deve ser rigoroso** - Evitar palavras genéricas e usar apenas tags principais
+2. **Histórico deve ser limitado e filtrado** - Focar apenas na pergunta atual
+3. **Detectar interações sociais antes de RAG** - Não processar desnecessariamente
+4. **Pós-processamento robusto é essencial** - Modelos menores precisam de ajuda
+5. **Remoção destrutiva garante qualidade** - Remover antes de inserir conteúdo formatado
+6. **Instruções explícitas no prompt** - Modelos menores precisam de orientação clara
+7. **Lógica invertida para formatação** - "Na dúvida, reformate" garante consistência
+
+---
+
 **Última atualização:** 29/11/2025  
 **Projeto:** TasteMatch - Agente de Recomendação Inteligente  
-**Fase:** 16 - Correções de Áudio e Chat ✅
+**Fase:** 17 - Melhorias de Inteligência e Formatação do Chef Virtual ✅
 
