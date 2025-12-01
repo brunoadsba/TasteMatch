@@ -30,6 +30,9 @@ def get_current_user_info(
         
     Returns:
         UserResponse: Informações do usuário
+        
+    Raises:
+        HTTPException: Se o banco de dados não estiver disponível
     """
     return UserResponse.model_validate(current_user)
 
