@@ -20,7 +20,12 @@ from app.core.rag_service import RAGService
 from app.core.recommender import extract_user_patterns, generate_recommendations
 from app.core.prompt_versions import get_prompt_version_for_user
 from app.core.llm_monitoring import LLMMonitoringCallback, log_llm_metrics
+from app.core.query_expansion import expand_query_with_synonyms, should_expand_query
+from app.core.response_cache import get_response_cache, should_cache_query
 from app.database import crud
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class ChatGroqFiltered(ChatGroq):
@@ -220,10 +225,30 @@ Seja direto, objetivo e natural.
 
 **ESCOPO**: APENAS restaurantes, comida, pratos, receitas e alimentação.
 
+**⚠️ REGRA CRÍTICA DE CONTEXTO:**
+- **FOQUE APENAS NA PERGUNTA ATUAL**: Analise a pergunta do usuário e responda SOMENTE a ela.
+- **NÃO continue conversas anteriores**: Se o histórico mencionar outros assuntos ou perguntas antigas, IGNORE-OS completamente.
+- **NÃO faça referências a mensagens antigas**: Responda como se esta fosse a primeira interação, baseando-se apenas na pergunta atual e no contexto disponível.
+- **Se a pergunta atual for sobre "churrasco", responda sobre churrasco. Se for "oi" ou "tudo bem?", responda de forma breve e amigável, mas NÃO mencione ou continue assuntos de conversas anteriores.**
+
 **REGRAS CRÍTICAS:**
 - **CONTEXTO GEOGRÁFICO**: Estamos no Brasil. Priorize restaurantes brasileiros quando disponíveis.
-- **USE APENAS O CONTEXTO FORNECIDO**: Use EXCLUSIVAMENTE as informações do campo "Contexto" abaixo. NÃO invente restaurantes, NÃO use conhecimento geral.
-- Se mencionar restaurantes, use APENAS os nomes que aparecem EXATAMENTE no contexto ou nas recomendações.
+
+- **DIRETRIZES DE RACIOCÍNIO (Protocolo Chef Resiliente)**:
+  
+  **🕵️‍♂️ ANÁLISE DE DADOS (RAG)**:
+  - Verifique o campo "Contexto" abaixo.
+  - **ATENÇÃO ESPECIAL**: Analise o campo "Tags e pratos relacionados" nos documentos de restaurantes.
+  - Se o usuário pedir "Churrasco" e você encontrar um restaurante "Brasileira" com a tag "churrasco", ISSO É UM MATCH. Recomende-o!
+  - Se houver restaurantes que atendam ao pedido: RECOMENDE-OS DIRETAMENTE.
+  
+  **🔄 GESTÃO DE EXPECTATIVA (Fallback)**:
+  - Se o contexto estiver VAZIO: NÃO diga "não encontrei". Use conhecimento geral sobre o prato e sugira alternativas próximas.
+  
+  **🚫 REGRAS DE SEGURANÇA**:
+  - JAMAIS invente nomes de restaurantes. Use estritamente os dados do Contexto.
+
+- Se mencionar restaurantes específicos, use APENAS os nomes que aparecem EXATAMENTE no contexto ou nas recomendações.
 - **RESPEITE O ORÇAMENTO**: Não julgue ou condescenda sobre orçamento limitado. Sugira alternativas dentro do orçamento. Seja empático.
 - **SEJA DIRETO E OBJETIVO**: 
   - NÃO use frases como "Com base no contexto", "Eu diria que", "Lembre-se de que", "Você mencionou", "Você quer"
@@ -235,16 +260,26 @@ Seja direto, objetivo e natural.
   - Vá direto ao ponto: mencione restaurantes e características relevantes
   - Evite repetições de informações (avaliação/preço)
   - Seja conciso: remova palavras desnecessárias
-- Se não souber algo baseado no contexto, diga: "Não tenho informações específicas sobre isso no momento."
+- **QUANDO NÃO HÁ CONTEXTO ESPECÍFICO**: Se a pergunta for sobre comida/restaurantes mas não houver contexto relevante:
+  - Responda de forma útil usando conhecimento geral sobre comida, culinária e restaurantes
+  - Foque em tipos de culinária, pratos, ingredientes e dicas gastronômicas
+  - NÃO invente nomes de restaurantes específicos
+  - Seja honesto: "Não tenho informações sobre restaurantes específicos no momento, mas posso ajudar com [tipo de culinária/prato/dica relacionada]"
 - **CRÍTICO**: Você NÃO responde perguntas sobre viagens, tecnologia, entretenimento, saúde, educação ou qualquer outro assunto fora de comida/restaurantes. Se perguntarem algo fora do escopo, responda: "Desculpe, eu sou especializado APENAS em restaurantes, comida e alimentação. Não posso ajudar com outros assuntos. Como posso ajudá-lo a encontrar um restaurante, prato ou receita hoje?"
 
 Contexto:
 {{context}}
 
-Histórico:
+⚠️ **REGRA CRÍTICA DE CONTEXTO:**
+- FOQUE APENAS NA PERGUNTA ATUAL abaixo.
+- NÃO continue conversas anteriores do histórico.
+- Analise a pergunta e responda SOMENTE a ela, ignorando assuntos antigos.
+
+Histórico (apenas referência - IGNORE se não relevante):
 {{chat_history}}
 
-Pergunta: {{question}}
+**PERGUNTA ATUAL (RESPONDA APENAS A ESTA):**
+{{question}}
 
 Resposta:"""
     
@@ -259,8 +294,21 @@ Seja super amigável, conversacional e entusiasmado sobre comida e restaurantes.
 **MEU ESCOPO**: Apenas restaurantes, pratos, receitas, culinária e alimentação.
 
 **REGRAS IMPORTANTES:**
-- **USE APENAS O CONTEXTO FORNECIDO**: Use EXCLUSIVAMENTE as informações do campo "Contexto disponível" abaixo. NÃO invente restaurantes, NÃO use conhecimento geral.
-- Use apenas restaurantes que aparecem EXATAMENTE no contexto abaixo ou nas recomendações.
+- **DIRETRIZES DE RACIOCÍNIO (Protocolo Chef Resiliente)**:
+  
+  **🕵️‍♂️ ANÁLISE DE DADOS (RAG)**:
+  - Verifique o campo "Contexto disponível" abaixo.
+  - **ATENÇÃO ESPECIAL**: Analise o campo "Tags e pratos relacionados" nos documentos de restaurantes.
+  - Se encontrar match via tags (ex: "churrasco" em restaurante brasileiro), recomende explicando a conexão!
+  
+  **🔄 GESTÃO DE EXPECTATIVA (Fallback)**:
+  - Se o contexto estiver VAZIO: Use conhecimento geral sobre o prato e sugira alternativas próximas.
+  - NÃO diga apenas "não encontrei". Seja consultivo e útil.
+  
+  **🚫 REGRAS DE SEGURANÇA**:
+  - JAMAIS invente nomes de restaurantes. Use estritamente os dados do Contexto.
+
+- Se mencionar restaurantes específicos, use apenas os que aparecem EXATAMENTE no contexto abaixo ou nas recomendações.
 - **SEJA DIRETO E OBJETIVO**: 
   - NÃO use frases como "Com base no contexto", "Eu diria que", "Lembre-se de que", "Você mencionou", "Você quer"
   - NÃO repita a pergunta do usuário
@@ -271,16 +319,23 @@ Seja super amigável, conversacional e entusiasmado sobre comida e restaurantes.
   - Evite repetições de informações (avaliação/preço)
   - Seja conciso: remova palavras desnecessárias
 - Seja amigável e conversacional, mas sempre direto.
-- Se não souber algo baseado no contexto, seja honesto: "Não tenho informações específicas sobre isso no momento."
+- **QUANDO NÃO HÁ CONTEXTO ESPECÍFICO**: Se a pergunta for sobre comida/restaurantes mas não houver contexto relevante:
+  - Responda de forma útil usando conhecimento geral sobre comida, culinária e restaurantes
+  - Foque em tipos de culinária, pratos, ingredientes e dicas gastronômicas
+  - NÃO invente nomes de restaurantes específicos
+  - Seja honesto: "Não tenho informações sobre restaurantes específicos no momento, mas posso ajudar com [tipo de culinária/prato/dica relacionada]"
 - **CRÍTICO**: Eu NÃO respondo perguntas sobre viagens, tecnologia, entretenimento, saúde, educação ou qualquer outro assunto. Se o usuário perguntar algo fora do escopo, responda educadamente: "Desculpe, eu sou especializado APENAS em restaurantes, comida e alimentação. Não posso ajudar com outros assuntos. Como posso ajudá-lo a encontrar um restaurante, prato ou receita hoje?"
 
 Contexto disponível:
 {{context}}
 
-Nossa conversa anterior:
+⚠️ **FOQUE APENAS NA PERGUNTA ATUAL**: Analise a pergunta abaixo e responda SOMENTE a ela. NÃO continue conversas anteriores.
+
+Nossa conversa anterior (apenas referência):
 {{chat_history}}
 
-O que você quer saber: {{question}}
+**O que você quer saber AGORA:**
+{{question}}
 
 Minha resposta:"""
     
@@ -303,11 +358,61 @@ Seja natural, conversacional e amigável, como se estivesse conversando com um a
 
 **REGRAS CRÍTICAS:**
 1. **CONTEXTO GEOGRÁFICO**: Estamos no Brasil. Priorize restaurantes brasileiros quando disponíveis. Use culinária e contexto brasileiro.
-2. **USE APENAS O CONTEXTO FORNECIDO**: Você DEVE usar EXCLUSIVAMENTE as informações que aparecem no campo "Contexto relevante" abaixo. NÃO use conhecimento geral, NÃO invente restaurantes, NÃO mencione restaurantes que não aparecem explicitamente no contexto.
-3. Se o contexto não contiver restaurantes específicos, use as recomendações personalizadas fornecidas acima (se houver).
-4. **PROIBIDO MENCIONAR RESTAURANTES FORA DO CONTEXTO**: Se mencionar restaurantes, use APENAS os nomes que aparecem EXATAMENTE no contexto fornecido ou nas recomendações. Se um restaurante não está no contexto, NÃO o mencione, mesmo que você "saiba" que ele existe.
+
+2. **DIRETRIZES DE RACIOCÍNIO (Protocolo Chef Resiliente)**:
+   
+   **🕵️‍♂️ ANÁLISE DE DADOS (RAG)**:
+   - Verifique o campo "Contexto relevante" abaixo.
+   - **ATENÇÃO ESPECIAL**: Analise o campo "Tags e pratos relacionados" nos documentos de restaurantes.
+   - Se o usuário pedir "Churrasco" e você encontrar um restaurante "Brasileira" com a tag "churrasco" ou "carne grelhada", ISSO É UM MATCH. Recomende-o explicando a conexão!
+   - Se houver restaurantes listados que atendam ao pedido: RECOMENDE-OS DIRETAMENTE, citando nome, avaliação e por que combina.
+   - **FASE 3**: Use sinônimos e termos relacionados para fazer conexões inteligentes (ex: "rodízio" = "churrasco", "sushi" = "japonesa").
+   
+   **🔄 GESTÃO DE EXPECTATIVA (Fallback Estratégico)**:
+   - Se o usuário pedir algo específico (ex: "Quero Churrasco") e o contexto estiver VAZIO ou irrelevante:
+     - **NÃO DIGA** "Não encontrei nada" ou "Alguns restaurantes não estão disponíveis".
+     - **DIGA**: "No momento, não tenho uma churrascaria tradicional listada na minha base direta..."
+     - **AÇÃO EDUCATIVA**: Use seu conhecimento geral para comentar brevemente sobre o prato (ex: "Um bom churrasco pede uma picanha suculenta, certo?").
+     - **AÇÃO CONSULTIVA**: Sugira a alternativa mais próxima disponível nas "Recomendações Personalizadas" ou no contexto geral (ex: "...mas vejo que o [Restaurante Y] tem ótimas opções de carnes grelhadas/pratos brasileiros que podem matar sua vontade.").
+   
+   **🎓 USO DE CONHECIMENTO GERAL**:
+   - Você tem acesso a um manual interno sobre tipos de culinária (Brasileira, Italiana, etc.) no contexto estático.
+   - Use essas informações para descrever *por que* uma recomendação é boa (ex: "Este prato usa cortes nobres, típico de um bom churrasco...").
+   - Quando não há contexto específico, use conhecimento geral sobre comida, culinária e dicas gastronômicas para responder de forma útil.
+   
+   **🚫 REGRAS DE SEGURANÇA (Alucinação Zero)**:
+   - Você pode usar conhecimento geral para falar sobre *comida* (ingredientes, cultura, tipos de culinária).
+   - Você **JAMAIS** pode inventar nomes de *restaurantes* que não estejam no contexto ou nas recomendações fornecidas.
+
+3. **SOBRE RESTAURANTES ESPECÍFICOS**: Se mencionar restaurantes específicos, use APENAS os nomes que aparecem EXATAMENTE no contexto fornecido ou nas recomendações. Se um restaurante não está no contexto, NÃO o mencione pelo nome, mas você pode falar sobre tipos de culinária, pratos e características gerais.
 5. **RESPEITE O ORÇAMENTO DO USUÁRIO**: Não julgue ou condescenda sobre orçamento limitado. Sugira alternativas dentro do orçamento informado. Seja empático e respeitoso.
-4. **SEJA DIRETO, OBJETIVO E NATURAL**: 
+4. **FORMATAÇÃO VISUAL OBRIGATÓRIA** (quando recomendar restaurantes):
+   - **CRÍTICO**: Você DEVE seguir EXATAMENTE este formato. NÃO invente variações.
+   - **SEMPRE use separadores visuais**: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ entre restaurantes
+   - **SEMPRE inclua emojis de culinária**: 🔥 (brasileira), 🍝 (italiana), 🍣 (japonesa), 🍔 (americana), etc.
+   - **SEMPRE formate preço**: 💰💰💰 (R$ 80-120), 💰💰 (R$ 50-80), ou 💰 (R$ 20-50)
+   - **SEMPRE inclua localização**: 📍 [localização] quando disponível no contexto
+   - **SEMPRE adicione destaque único**: 🎯 [destaque específico do restaurante]
+   - **SEMPRE mostre rating**: ⭐ [rating]/5.0 (use o rating do contexto, não invente)
+   - **Formato OBRIGATÓRIO para cada restaurante** (copie exatamente):
+     ```
+     🔥 **Nome do Restaurante**
+        ⭐ 4.8/5.0  |  💰💰💰 (R$ 80-120)  |  📍 Localização
+        🎯 Destaque único do restaurante
+        Descrição específica (2-3 linhas sobre o que torna este restaurante especial)
+     
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     
+     🔥 **Outro Restaurante**
+        ⭐ 4.5/5.0  |  💰💰 (R$ 50-80)  |  📍 Outra Localização
+        🎯 Destaque único diferente
+        Descrição específica diferente
+     ```
+   - **Máximo 2-3 restaurantes** por resposta
+   - **Adicione comparação rápida** no final: 💡 **Comparação:** [breve comparação entre os restaurantes]
+   - **IMPORTANTE**: Se o contexto já fornecer informações formatadas (com emojis, preços, etc.), USE-AS. Não reescreva de forma diferente.
+
+5. **SEJA DIRETO, OBJETIVO E NATURAL**: 
    - NÃO use frases como "Com base no contexto", "Com base nas informações", "Eu diria que", "Lembre-se de que", "Além disso", "É importante verificar"
    - NÃO repita a pergunta do usuário: não diga "Você mencionou...", "Você quer...", "Você está procurando..."
    - NÃO mencione o nome do usuário na resposta (o nome só deve aparecer na saudação inicial, se houver)
@@ -319,9 +424,14 @@ Seja natural, conversacional e amigável, como se estivesse conversando com um a
    - Foque no que o usuário precisa saber, não em explicações sobre o processo
    - Seja natural e conversacional, como se estivesse conversando com um amigo que conhece restaurantes
    - Use linguagem simples e direta, evite formalidades excessivas
-5. Se não souber algo com certeza baseado no contexto, seja honesto e diga: "Não tenho informações específicas sobre isso no momento. Como posso ajudá-lo de outra forma?"
-6. **SOBRE iFood**: Se perguntarem sobre iFood, use APENAS as informações que aparecem no contexto. Se não houver informações sobre iFood no contexto, responda de forma genérica sobre delivery de comida, mas NÃO invente características específicas.
-6. **CRÍTICO - FORA DO ESCOPO**: Você NÃO pode e NÃO deve responder perguntas sobre:
+6. **QUANDO NÃO HÁ CONTEXTO ESPECÍFICO**: Se a pergunta for sobre comida/restaurantes mas não houver contexto relevante:
+   - Responda de forma útil usando conhecimento geral sobre comida, culinária e restaurantes
+   - Foque em tipos de culinária, pratos, ingredientes e dicas gastronômicas
+   - NÃO invente nomes de restaurantes específicos
+   - Seja honesto: "Não tenho informações sobre restaurantes específicos no momento, mas posso ajudar com [tipo de culinária/prato/dica relacionada]"
+   - Sempre mantenha o foco em comida e restaurantes
+7. **SOBRE iFood**: Se perguntarem sobre iFood, use APENAS as informações que aparecem no contexto. Se não houver informações sobre iFood no contexto, responda de forma genérica sobre delivery de comida, mas NÃO invente características específicas.
+8. **CRÍTICO - FORA DO ESCOPO**: Você NÃO pode e NÃO deve responder perguntas sobre:
    - Viagens, passagens, turismo, hotéis, aeroportos
    - Tecnologia, computadores, celulares, aplicativos (exceto apps de delivery)
    - Entretenimento, filmes, séries, música, shows
@@ -332,7 +442,7 @@ Seja natural, conversacional e amigável, como se estivesse conversando com um a
    - Moda, roupas, acessórios
    - QUALQUER outro assunto que não seja relacionado a comida, restaurantes ou alimentação
    
-7. **RESPOSTA PADRÃO PARA FORA DO ESCOPO**: Se o usuário perguntar algo fora do escopo, responda EXATAMENTE assim (sem variações):
+9. **RESPOSTA PADRÃO PARA FORA DO ESCOPO**: Se o usuário perguntar algo fora do escopo, responda EXATAMENTE assim (sem variações):
    "Desculpe, eu sou especializado APENAS em restaurantes, comida e alimentação. Não posso ajudar com outros assuntos. Como posso ajudá-lo a encontrar um restaurante, prato ou receita hoje?"
 
 **IMPORTANTE**: Se a pergunta não for sobre comida/restaurantes, você DEVE recusar educadamente e redirecionar para o seu escopo.
@@ -340,10 +450,13 @@ Seja natural, conversacional e amigável, como se estivesse conversando com um a
 Contexto relevante:
 {{context}}
 
-Histórico da conversa:
+⚠️ **REGRA CRÍTICA**: FOQUE APENAS NA PERGUNTA ATUAL. NÃO continue conversas anteriores do histórico.
+
+Histórico da conversa (apenas referência - IGNORE se não relevante):
 {{chat_history}}
 
-Pergunta do usuário: {{question}}
+**PERGUNTA ATUAL DO USUÁRIO (RESPONDA APENAS A ESTA):**
+{{question}}
 
 Resposta do Chef Virtual:"""
     
@@ -356,28 +469,75 @@ Resposta do Chef Virtual:"""
 def get_conversation_history(
     user_id: int,
     db: Optional[Session] = None,
-    max_messages: int = 10
+    max_messages: int = 4,  # REDUZIDO: Apenas últimas 2-3 interações (4 mensagens = 2 perguntas + 2 respostas)
+    current_question: Optional[str] = None
 ) -> List:
     """
     Obtém histórico de conversa do usuário do banco de dados
+    MELHORIA: Limita histórico e filtra mensagens irrelevantes
     
     Args:
         user_id: ID do usuário
         db: Sessão do banco de dados (opcional, se None retorna lista vazia)
-        max_messages: Número máximo de mensagens a retornar
+        max_messages: Número máximo de mensagens a retornar (padrão: 4 = 2 interações)
+        current_question: Pergunta atual (para filtrar histórico relevante)
     
     Returns:
-        Lista de mensagens (HumanMessage, AIMessage)
+        Lista de mensagens (HumanMessage, AIMessage) - apenas últimas interações relevantes
     """
     if not db:
         return []
     
-    # Buscar mensagens recentes do banco
+    # Buscar mensagens recentes do banco (apenas últimas 2-3 interações)
     messages = crud.get_user_chat_messages_recent(db, user_id, limit=max_messages)
+    
+    if not messages:
+        return []
     
     # Converter para formato LangChain (HumanMessage, AIMessage)
     langchain_messages = []
-    for msg in reversed(messages):  # Reverter para ordem cronológica (mais antigas primeiro)
+    
+    # MELHORIA: Filtrar mensagens relevantes se temos pergunta atual
+    if current_question:
+        current_question_lower = current_question.lower().strip()
+        
+        # Detectar se é pergunta curta (cumprimento/saudação)
+        short_greetings = ['oi', 'olá', 'ola', 'hey', 'hi', 'tudo bem', 'tudo bom', 'e aí', 'eai']
+        is_short_greeting = (
+            len(current_question_lower.split()) <= 3 and 
+            any(greeting in current_question_lower for greeting in short_greetings)
+        )
+        
+        # Para cumprimentos curtos, NÃO usar histórico (evitar continuar conversas antigas)
+        if is_short_greeting:
+            logger.debug(f"Pergunta curta detectada ('{current_question}') - não usando histórico")
+            return []  # Retornar histórico vazio para cumprimentos
+        
+        # Para perguntas sobre comida, usar histórico filtrado
+        # Palavras-chave da pergunta atual (apenas palavras significativas)
+        current_keywords = set(word for word in current_question_lower.split() 
+                              if len(word) > 3 and word not in ['quero', 'queria', 'gostaria', 'preciso'])
+        
+        # Incluir apenas mensagens que tenham alguma relação com a pergunta atual
+        # OU que sejam muito recentes (última interação apenas)
+        relevant_messages = []
+        for i, msg in enumerate(reversed(messages)):  # Mais recentes primeiro
+            # Para perguntas sobre comida, incluir apenas última interação (2 mensagens)
+            # para contexto imediato, mas não mais que isso
+            if i < 2:  # Apenas última pergunta + resposta
+                relevant_messages.append(msg)
+            # Para mensagens mais antigas, verificar relevância semântica
+            elif current_keywords:
+                msg_lower = msg.content.lower()
+                # Se mensagem tem palavras-chave em comum, é relevante
+                if any(keyword in msg_lower for keyword in current_keywords):
+                    relevant_messages.append(msg)
+                    break  # Parar após encontrar primeira mensagem relevante
+        
+        messages = list(reversed(relevant_messages))  # Voltar ordem cronológica
+    
+    # Converter para LangChain (ordem cronológica: mais antigas primeiro)
+    for msg in reversed(messages):
         if msg.role == "user":
             langchain_messages.append(HumanMessage(content=msg.content))
         elif msg.role == "assistant":
@@ -473,7 +633,9 @@ def create_chef_chain(
         orders = crud.get_user_orders(db, user_id=user_id, limit=50)
         if orders:
             # Buscar restaurantes para extract_user_patterns
-            restaurants = crud.get_restaurants(db, skip=0, limit=1000)
+            # OTIMIZAÇÃO MEMÓRIA: Usar get_restaurants_metadata() que carrega apenas metadados essenciais
+            # Reduz uso de memória em ~60-80% comparado a get_restaurants(limit=1000)
+            restaurants = crud.get_restaurants_metadata(db, limit=500)  # Reduzido de 1000 para 500
             user_patterns = extract_user_patterns(user_id, orders, restaurants)
             
             # Converter padrões para formato de preferências (compatibilidade)
@@ -500,8 +662,8 @@ def create_chef_chain(
     prompt_version = get_prompt_version_for_user(user_id)
     
     # Obter retriever com mais documentos para incluir restaurantes
-    # Aumentar k para garantir que restaurantes sejam incluídos
-    retriever = rag_service.get_retriever(k=10)
+    # FASE 2: Aumentado k de 10 para 15 para melhor recuperação de contexto
+    retriever = rag_service.get_retriever(k=15)
     
     # Criar prompt com histórico e perfil completo do usuário
     system_prompt_text = create_chef_prompt_template(
@@ -513,47 +675,244 @@ def create_chef_chain(
     ).template
     
     def format_docs(docs):
-        """Formata documentos para o contexto, incluindo metadados relevantes"""
+        """
+        Formata documentos para o contexto, removendo duplicatas e formatando de forma concisa.
+        
+        PROTOCOLO CHEF RESILIENTE: Destaca tags semânticas para facilitar
+        conexões entre perguntas do usuário e restaurantes disponíveis.
+        MELHORIA UX/UI: Formatação visual moderna com separadores, preço formatado,
+        localização e destaques únicos.
+        """
         formatted = []
+        seen_restaurants = set()  # Evitar duplicatas
+        
+        # Mapeamento de preço para texto formatado
+        price_text_map = {
+            "high": "💰💰💰 (R$ 80-120)",
+            "medium": "💰💰 (R$ 50-80)",
+            "low": "💰 (R$ 20-50)"
+        }
+        
+        # Mapeamento de tipo de culinária para emoji
+        cuisine_emoji_map = {
+            "brasileira": "🔥",
+            "italiana": "🍝",
+            "japonesa": "🍣",
+            "americana": "🍔",
+            "mexicana": "🌮",
+            "árabe": "🥙",
+            "hamburgueria": "🍔",
+            "pizzaria": "🍕"
+        }
+        
         for doc in docs:
             content = doc.page_content
             metadata = doc.metadata if hasattr(doc, 'metadata') else {}
             
             # Adicionar informações de metadados se for restaurante
             if metadata.get('type') == 'restaurant':
-                name = metadata.get('name', '')
-                cuisine = metadata.get('cuisine_type', '')
+                name = metadata.get('name', '').strip()
+                
+                # Pular se já vimos este restaurante
+                if name and name.lower() in seen_restaurants:
+                    continue
+                
                 if name:
-                    formatted.append(f"Restaurante: {name}" + (f" (Culinária: {cuisine})" if cuisine else "") + f"\n{content}")
+                    seen_restaurants.add(name.lower())
+                    cuisine = metadata.get('cuisine_type', '')
+                    keywords = metadata.get('keywords', '')
+                    rating = metadata.get('rating', '')
+                    price_range = metadata.get('price_range', '')
+                    location = metadata.get('location', '')
+                    
+                    # Emoji identificador por tipo de culinária
+                    cuisine_lower = cuisine.lower() if cuisine else ''
+                    emoji = cuisine_emoji_map.get(cuisine_lower, "🍽️")
+                    
+                    # Formato profissional e conciso com melhor hierarquia visual
+                    header_parts = [f"{emoji} **{name}**"]
+                    
+                    # Linha de metadados (rating, preço, localização)
+                    meta_parts = []
+                    if rating:
+                        meta_parts.append(f"⭐ {rating}/5.0")
+                    if price_range and price_range in price_text_map:
+                        meta_parts.append(price_text_map[price_range])
+                    elif price_range:
+                        price_emoji = "💰" if price_range == "high" else "💵" if price_range == "medium" else "💸"
+                        meta_parts.append(price_emoji)
+                    if location:
+                        meta_parts.append(f"📍 {location}")
+                    
+                    # Destaque único (será gerado pelo LLM, mas fornecemos contexto)
+                    highlight = get_restaurant_highlight(metadata)
+                    
+                    # CORREÇÃO: NÃO usar page_content diretamente (contém formato técnico)
+                    # Usar description do metadata ou gerar descrição baseada em metadados
+                    description_for_context = metadata.get('description', '').strip()
+                    
+                    # Se não houver description, gerar baseada em metadados
+                    if not description_for_context or len(description_for_context) < 20:
+                        cuisine = metadata.get('cuisine_type', '')
+                        if cuisine:
+                            description_for_context = f"Restaurante especializado em {cuisine}"
+                            keywords = metadata.get('keywords', '')
+                            if keywords:
+                                first_keyword = keywords.split(',')[0].strip()
+                                if first_keyword and len(first_keyword) < 30:
+                                    description_for_context += f" com foco em {first_keyword}"
+                    
+                    # Limitar a 120 caracteres para contexto
+                    if description_for_context:
+                        content_preview = description_for_context[:120].strip()
+                        if len(description_for_context) > 120:
+                            content_preview += "..."
+                    else:
+                        # Fallback: usar apenas nome e tipo de culinária
+                        content_preview = f"Restaurante {name}"
+                        if cuisine:
+                            content_preview += f" especializado em {cuisine}"
+                    
+                    # Montar formato completo
+                    formatted_doc = f"{header_parts[0]}"
+                    if meta_parts:
+                        formatted_doc += f"\n   {'  |  '.join(meta_parts)}"
+                    if highlight:
+                        formatted_doc += f"\n   🎯 {highlight}"
+                    if keywords:
+                        formatted_doc += f"\n   • Tags: {keywords}"
+                    formatted_doc += f"\n   {content_preview}"
+                    
+                    formatted.append(formatted_doc)
                 else:
                     formatted.append(content)
             else:
                 formatted.append(content)
         
-        return "\n\n".join(formatted)
+        # Separar com separadores visuais
+        return "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n".join(formatted)
     
     # Criar chain usando LCEL
     # Ajustar para receber question como string diretamente
     def create_input_dict(query: str):
-        docs = retriever.invoke(query)
-        return {
-            "context": format_docs(docs),
-            "question": query,
-            "chat_history": get_conversation_history(user_id or 0, db=db)
-        }
+        try:
+            logger.debug(f"Buscando documentos no RAG para: '{query[:100]}...'")
+            docs = retriever.invoke(query)
+            logger.debug(f"Documentos recuperados pelo retriever: {len(docs)}")
+            
+            context = format_docs(docs)
+            # MELHORIA: Passar pergunta atual para filtrar histórico relevante
+            chat_history = get_conversation_history(user_id or 0, db=db, current_question=query)
+            
+            logger.debug(f"Contexto formatado: {len(context)} caracteres")
+            logger.debug(f"Histórico de conversa: {len(chat_history)} mensagens (filtrado para relevância)")
+            
+            return {
+                "context": context,
+                "question": query,
+                "chat_history": chat_history
+            }
+        except Exception as e:
+            import traceback
+            logger.error(f"Erro em create_input_dict: {type(e).__name__}: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            # Retornar valores vazios para não quebrar a chain
+            return {
+                "context": "",
+                "question": query,
+                "chat_history": []
+            }
     
     chain = (
         RunnablePassthrough() | create_input_dict
         | ChatPromptTemplate.from_messages([
             SystemMessage(content=system_prompt_text),
             MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{question}\n\n**CONTEXTO DISPONÍVEL:**\n{context}\n\n**INSTRUÇÕES CRÍTICAS**: Seja natural, direto e conversacional. NÃO use frases como 'Com base no contexto', 'Eu diria que', 'Você mencionou', 'Você quer'. NÃO repita a pergunta do usuário. NÃO mencione o nome do usuário. **SEMPRE mencione o nome do restaurante antes de falar sobre características - NÃO use 'Eles têm' ou 'Eles são' sem mencionar o restaurante primeiro.** Vá direto ao ponto. Evite repetições. Fale como um amigo que conhece restaurantes."),
+            ("human", "{question}\n\n**CONTEXTO DISPONÍVEL:**\n{context}\n\n**INSTRUÇÕES CRÍTICAS DE FORMATAÇÃO**: \n\n1. **USE O FORMATO EXATO DO CONTEXTO**: Se o contexto já mostra restaurantes formatados com emojis (🔥, 🍝, etc.), preços (💰💰💰), localização (📍) e destaques (🎯), COPIE ESSE FORMATO EXATAMENTE.\n\n2. **FORMATO OBRIGATÓRIO para cada restaurante**:\n   ```\n   🔥 **Nome do Restaurante**\n      ⭐ [rating]/5.0  |  💰💰💰 (R$ 80-120)  |  📍 [localização]\n      🎯 [destaque único]\n      [descrição específica 2-3 linhas]\n   \n   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n   ```\n\n3. **VALIDAÇÃO SEMÂNTICA RIGOROSA**: Só recomende restaurantes que tenham tags/características que correspondam EXATAMENTE ao que foi pedido. Se o usuário pedir 'churrasco', só recomende restaurantes com tags 'churrasco', 'rodízio', 'churrascaria' ou 'picanha'. NÃO invente características.\n\n4. **Máximo 2-3 restaurantes**. Adicione comparação rápida no final: 💡 **Comparação:** [breve comparação].\n\n5. **NÃO repita descrições genéricas. Diferencie claramente cada restaurante. NÃO use frases vagas. Vá direto ao ponto. Seja objetivo, profissional e moderno.**"),
         ])
         | llm
         | StrOutputParser()
     )
     
     return chain
+
+
+def get_restaurant_highlight(restaurant_metadata: dict) -> str:
+    """
+    Gera destaque único baseado em características do restaurante.
+    
+    Args:
+        restaurant_metadata: Dicionário com metadados do restaurante
+    
+    Returns:
+        String com destaque único ou vazio se não houver
+    """
+    name = restaurant_metadata.get('name', '').strip().lower()
+    keywords = restaurant_metadata.get('keywords', '').lower()
+    cuisine = restaurant_metadata.get('cuisine_type', '').lower()
+    
+    # Mapeamento de nomes conhecidos para destaques específicos
+    name_highlights = {
+        'fogo de chão': 'Melhor picanha da região',
+        'barbacoa': 'Tradição gaúcha autêntica',
+        'churrascaria gaúcha': 'Churrasco gaúcho tradicional',
+        'bovinus': 'Rodízio premium com cortes especiais',
+        'rodeio grill': 'Ambiente descontraído e acolhedor',
+        'outback steakhouse': 'Carnes grelhadas premium',
+        'coco bambu': 'Frutos do mar frescos',
+        'sushi house': 'Sushi artesanal de qualidade',
+        'cantina italiana': 'Massas caseiras e vinhos selecionados',
+        'papa john\'s': 'Pizzas artesanais',
+        'habib\'s': 'Comida árabe autêntica',
+        'viena': 'Comida brasileira tradicional',
+        'giraffas': 'Comida brasileira rápida e saborosa',
+        'casa do pão de queijo': 'Pães de queijo e café mineiro',
+        'popeyes': 'Frango frito estilo Louisiana',
+        'kfc': 'Frango frito crocante',
+        'taco bell': 'Comida mexicana rápida',
+        'bob\'s': 'Hambúrgueres e milkshakes',
+    }
+    
+    # Verificar se há destaque específico para o nome
+    if name in name_highlights:
+        return name_highlights[name]
+    
+    # Fallback baseado em keywords
+    if keywords:
+        keyword_highlights = {
+            'rodízio': 'Rodízio completo premium',
+            'picanha': 'Picanha especial',
+            'churrasco': 'Churrasco autêntico',
+            'churrascaria': 'Churrascaria tradicional',
+            'sushi': 'Sushi artesanal',
+            'pizza': 'Pizzas artesanais',
+            'hamburguer': 'Hambúrgueres gourmet',
+            'massa': 'Massas caseiras',
+            'frutos do mar': 'Frutos do mar frescos',
+            'feijoada': 'Feijoada tradicional',
+        }
+        
+        for keyword, highlight in keyword_highlights.items():
+            if keyword in keywords:
+                return highlight
+    
+    # Fallback baseado em tipo de culinária
+    if cuisine:
+        cuisine_highlights = {
+            'brasileira': 'Culinária brasileira autêntica',
+            'italiana': 'Culinária italiana tradicional',
+            'japonesa': 'Culinária japonesa autêntica',
+            'americana': 'Culinária americana',
+            'mexicana': 'Culinária mexicana tradicional',
+            'árabe': 'Culinária árabe autêntica',
+        }
+        
+        if cuisine in cuisine_highlights:
+            return cuisine_highlights[cuisine]
+    
+    # Retornar vazio se não houver destaque específico
+    # O LLM pode gerar um destaque baseado no contexto
+    return ''
 
 
 def extract_restaurant_names_from_text(text: str) -> List[str]:
@@ -690,13 +1049,15 @@ def validate_answer_against_context(
                 context_restaurant_names.add(name.lower().replace('ã', 'a').replace('õ', 'o'))
     
     # Se db disponível, buscar todos os restaurantes do banco para validação completa
+    # OTIMIZAÇÃO MEMÓRIA: Usar get_restaurants_metadata() que carrega apenas metadados (não descrições)
     all_restaurant_names = set()
     if db:
         try:
-            restaurants = crud.get_restaurants(db, skip=0, limit=1000)
+            restaurants = crud.get_restaurants_metadata(db, limit=500)  # Reduzido de 1000 para 500
             for restaurant in restaurants:
-                all_restaurant_names.add(restaurant.name.lower())
-                all_restaurant_names.add(restaurant.name.lower().replace('ã', 'a').replace('õ', 'o'))
+                restaurant_name = restaurant.get('name') if isinstance(restaurant, dict) else restaurant.name
+                all_restaurant_names.add(restaurant_name.lower())
+                all_restaurant_names.add(restaurant_name.lower().replace('ã', 'a').replace('õ', 'o'))
         except Exception:
             pass  # Se erro, usar apenas contexto
     
@@ -851,6 +1212,171 @@ def fix_vague_restaurant_references(answer: str, source_documents: List[Any]) ->
     return ''.join(corrected_sentences)
 
 
+def clean_markdown_artifacts(text: str) -> str:
+    """
+    Remove artefatos de markdown e tokens de conexão soltos deixados pelo LLM.
+    Sanitização agressiva para garantir base limpa antes de qualquer processamento.
+    
+    Args:
+        text: Texto a ser limpo
+    
+    Returns:
+        Texto limpo sem artefatos
+    """
+    import re
+    
+    if not text:
+        return text
+    
+    # 1. Remove "🔥 de", "🔥 é", etc. em QUALQUER lugar (não só no início)
+    # Melhorado: captura com/sem espaço antes do emoji
+    text = re.sub(r'(?i)(?:^|\s)[🔥🍝🍣🍔🍕🌮🥙🦞]\s+(de|é|tem|oferece|do|da|dos|das)\s+', ' ', text)
+    
+    # 2. Remove padrão "🔥 ****" (emoji + espaço + asteriscos)
+    text = re.sub(r'[🔥🍝🍣🍔🍕🌮🥙🦞]\s+\*{3,}', '', text)
+    
+    # 3. Remove asteriscos soltos (3+ asteriscos consecutivos, como ****)
+    text = re.sub(r'\*{3,}', '', text)
+    
+    # 4. Remove linhas que contêm apenas um emoji solto
+    text = re.sub(r'^\s*[🔥🍝🍣🍔🍕🌮🥙🦞]\s*$', '', text, flags=re.MULTILINE)
+    
+    # 5. Remove texto introdutório verboso comum do LLM
+    # Padrões como "No entanto, posso sugerir...", "📄 visitar...", "⬆️ 💥"
+    # CORREÇÃO CRÍTICA: Remover frases genéricas sobre pratos/culinária
+    verbose_intro_patterns = [
+        r'(?i)^\s*\*\*\s*No\s+entanto[^.]*\.\s*',
+        r'(?i)^\s*No\s+entanto[^.]*\.\s*',
+        r'(?i)No\s+entanto,\s+posso\s+sugerir[^.]*\.\s*',
+        r'(?i)No\s+entanto,\s+posso\s+recomendar[^.]*\.\s*',
+        r'(?i)posso\s+sugerir\s+algumas\s+alternativas\s+próximas[^.]*\.\s*',
+        r'(?i)posso\s+sugerir\s+algumas\s+alternativas[^.]*\.\s*',
+        r'(?i)Se\s+você\s+estiver\s+procurando\s+por\s+algo\s+semelhante[^.]*\.\s*',
+        r'(?i)eu\s+recomendaria\s+o\s+de\s+ou\s+a[^.]*\.\s*',
+        r'(?i)recomendaria\s+o\s+de\s+ou\s+a[^.]*\.\s*',
+        r'(?i)recomendaria\s+o\s+de[^.]*\.\s*',
+        r'(?i)recomendaria\s+a\s+de[^.]*\.\s*',
+        r'(?i)^\s*posso\s+sugerir[^.]*\.\s*',
+        r'📄\s+visitar[^.]*\.\s*',
+        r'⬆️\s*💥\s*',
+        r'💥\s*\*\*',
+        r'(?i)algumas\s+opções\s+que\s+podem\s+ser\s+úteis[^.]*\.\s*',
+        r'(?i)restaurantes\s+listados\s+abaixo[^.]*\.\s*',
+        # NOVO: Remover frases genéricas sobre pratos/culinária
+        r'(?i)^\s*[A-Z][^.!?]*\s+(é|são)\s+um\s+(prato|pratos|tipo|tipos)[^.!?]*delicioso[^.!?]*!?\s*',
+        r'(?i)^\s*[A-Z][^.!?]*\s+(é|são)\s+um\s+(prato|pratos|tipo|tipos)[^.!?]*tradicional[^.!?]*!?\s*',
+        r'(?i)^\s*[A-Z][^.!?]*\s+(é|são)\s+um\s+(prato|pratos|tipo|tipos)[^.!?]*brasileiro[^.!?]*!?\s*',
+        # Exemplo específico: "Churrasco é um prato delicioso e tradicional brasileiro!"
+        r'(?i)^\s*churrasco\s+é\s+um\s+prato[^.!?]*!?\s*',
+        r'(?i)^\s*pizza\s+é\s+um\s+prato[^.!?]*!?\s*',
+        r'(?i)^\s*sushi\s+é\s+um\s+prato[^.!?]*!?\s*',
+    ]
+    for pattern in verbose_intro_patterns:
+        text = re.sub(pattern, '', text, flags=re.MULTILINE)
+    
+    # 6. Remove emojis soltos no início de linhas que não fazem parte de cards
+    # Mas preserva emojis que estão antes de nomes em negrito (cards válidos)
+    text = re.sub(r'^(?![🔥🍝🍣🍔🍕🌮🥙🦞]\s+\*\*)[🔥🍝🍣🍔🍕🌮🥙🦞]\s+', '', text, flags=re.MULTILINE)
+    
+    # 6.1. Remove emojis soltos em linhas vazias ou isolados (incluindo ⭐)
+    text = re.sub(r'^\s*[🔥🍝🍣🍔🍕🌮🥙🦞⭐]\s*$', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^\s*[🔥🍝🍣🍔🍕🌮🥙🦞⭐]\s*\n', '', text, flags=re.MULTILINE)
+    
+    # 7. Corrige espaçamento duplo gerado após remoções
+    text = re.sub(r'\s{2,}', ' ', text)
+    
+    # 8. Remove espaços no início e fim de linhas
+    text = re.sub(r'^\s+|\s+$', '', text, flags=re.MULTILINE)
+    
+    # 9. Limpar linhas vazias excessivas
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    
+    return text.strip()
+
+
+def clean_technical_metadata(text: str) -> str:
+    """
+    Remove agressivamente metadados técnicos e artefatos de RAG que vazaram para a resposta.
+    FASE 2: Regex expandida e mais agressiva para capturar todos os padrões.
+    
+    Args:
+        text: Texto a ser limpo
+    
+    Returns:
+        Texto limpo sem metadados técnicos
+    """
+    import re
+    
+    if not text:
+        return text
+    
+    # Lista expandida de padrões técnicos (Case Insensitive + Multiline)
+    technical_patterns = [
+        r'Restaurante:\s*.*$',                              # "Restaurante: ..."
+        r'Tipo de culinária:\s*.*$',                        # "Tipo de culinária: ..."
+        r'e pratos relacionados:\s*.*$',                    # "e pratos relacionados: ..."
+        r'Tags(?:\s*e\s*pratos\s*relacionados)?:\s*.*$',  # "Tags:" ou "Tags e pratos relacionados:"
+        r'Avaliação:\s*.*$',                                # "Avaliação: ..."
+        r'Faixa de preço:\s*.*$',                           # "Faixa de preço: ..."
+        r'Descrição:\s*.*$',                                # "Descrição: ..."
+        r'Source:\s*.*$',                                   # Artefatos LangChain
+        r'Metadata:\s*\{.*?\}',                            # JSON cru
+        r'Localização:\s*.*$',                              # "Localização: ..."
+    ]
+    
+    cleaned_text = text
+    
+    # Aplicar remoção para cada padrão
+    for pattern in technical_patterns:
+        cleaned_text = re.sub(pattern, '', cleaned_text, flags=re.IGNORECASE | re.MULTILINE)
+    
+    # Limpar espaços em branco excessivos (3+ quebras de linha → 2)
+    cleaned_text = re.sub(r'\n{3,}', '\n\n', cleaned_text)
+    
+    return cleaned_text.strip()
+
+
+def is_structurally_valid(text: str) -> bool:
+    """
+    Validação estrita: resposta só é aceita se estruturalmente perfeita.
+    Qualquer dúvida = False (força pós-processamento).
+    
+    Args:
+        text: Texto a ser validado
+    
+    Returns:
+        True se estrutura está perfeita, False caso contrário
+    """
+    import re
+    
+    # 1. Deve ter separadores claros
+    has_separators = '━━' in text or '━━━' in text
+    
+    # 2. Deve ter nomes em negrito logo após emojis ou no início de linhas
+    has_bold_names = bool(re.search(
+        r'(?:^|\n)\s*[🔥🍝🍣🍔🍕🌮🥙]\s+\*\*[^*]+\*\*', 
+        text, 
+        re.MULTILINE
+    ))
+    
+    # 3. NÃO deve ter artefatos óbvios (verificar em QUALQUER lugar, não só no início)
+    has_artifacts = (
+        '****' in text or 
+        re.search(r'[🔥🍝🍣🍔🍕🌮🥙]\s+(de|é|tem|oferece)\s+', text, re.IGNORECASE) or
+        re.search(r'[🔥🍝🍣🍔🍕🌮🥙]\s+\*{3,}', text) or
+        re.search(r'\*{3,}', text)
+    )
+    
+    # 4. Deve ter estrutura consistente: emoji + nome + metadados
+    has_consistent_structure = bool(re.search(
+        r'[🔥🍝🍣🍔🍕🌮🥙]\s+\*\*[^*]+\*\*\s*\n\s*[⭐💰📍🎯]', 
+        text, 
+        re.MULTILINE
+    ))
+    
+    return has_separators and has_bold_names and not has_artifacts and has_consistent_structure
+
+
 def clean_answer(answer: str, user_name: Optional[str] = None, question: Optional[str] = None) -> str:
     """
     Limpa a resposta removendo frases proibidas, repetições e informações desnecessárias
@@ -887,6 +1413,18 @@ def clean_answer(answer: str, user_name: Optional[str] = None, question: Optiona
         r'\bse arrepender\b',
         r'\bnão ter mais dinheiro\b',
         r'\bvocê pode se arrepender de não ter\b',
+        # Erros de português e textos incompletos
+        r'\bNo entanto,\s+posso\s+sugerir\b',
+        r'\bposso\s+sugerir\s+algumas\s+alternativas\s+próximas\b',
+        r'\bSe\s+você\s+estiver\s+procurando\s+por\s+algo\s+semelhante\b',
+        r'\beu\s+recomendaria\s+o\s+de\s+ou\s+a\b',
+        r'\brecomendaria\s+o\s+de\s+ou\s+a\b',
+        r'\brecomendaria\s+o\s+de\b',
+        r'\brecomendaria\s+a\s+de\b',
+        r'\brecomendaria\s+o\s+de\s+ou\b',
+        # Textos incompletos/gramaticalmente incorretos
+        r'\b\.\s*Se\s+você\s+estiver\s+procurando[^.]*\.\s*',
+        r'\b\.\s*eu\s+recomendaria\s+o\s+de[^.]*\.\s*',
     ]
     
     # Remover frases proibidas
@@ -905,6 +1443,21 @@ def clean_answer(answer: str, user_name: Optional[str] = None, question: Optiona
         ]
         for pattern in patterns:
             answer = re.sub(pattern, '', answer, flags=re.IGNORECASE)
+    
+    # Remover repetições de restaurantes mencionados
+    restaurant_mentions = {}
+    restaurant_pattern = r'\*\*([^*]+)\*\*'  # Padrão para **Nome do Restaurante**
+    
+    def replace_duplicate(match):
+        name = match.group(1).strip()
+        name_lower = name.lower()
+        if name_lower not in restaurant_mentions:
+            restaurant_mentions[name_lower] = name
+            return match.group(0)  # Manter primeira menção
+        return ''  # Remover duplicatas
+    
+    # Remover menções duplicadas de restaurantes
+    answer = re.sub(restaurant_pattern, replace_duplicate, answer)
     
     # Remover repetições da pergunta do usuário
     if question:
@@ -1006,10 +1559,35 @@ def clean_answer(answer: str, user_name: Optional[str] = None, question: Optiona
     
     answer = ''.join(corrected_sentences)
     
-    # Remover espaços duplos e limpar
-    answer = re.sub(r'\s+', ' ', answer)
-    answer = re.sub(r'\s+([.,!?])', r'\1', answer)  # Remover espaço antes de pontuação
-    answer = answer.strip()
+    # Preservar separadores visuais (━━━) antes de limpar espaços
+    # Dividir resposta em partes (separadores e conteúdo)
+    separator_pattern = r'(━{10,})'  # Padrão para separadores
+    parts = re.split(separator_pattern, answer)
+    preserved_parts = []
+    
+    for i, part in enumerate(parts):
+        if re.match(separator_pattern, part):
+            # É um separador, preservar
+            preserved_parts.append(part)
+        else:
+            # É conteúdo, limpar espaços
+            cleaned_part = re.sub(r'\s+', ' ', part)
+            cleaned_part = re.sub(r'\s+([.,!?])', r'\1', cleaned_part)
+            cleaned_part = re.sub(r'([.,!?])\s*\1+', r'\1', cleaned_part)
+            preserved_parts.append(cleaned_part)
+    
+    answer = ''.join(preserved_parts).strip()
+    
+    # Limitar tamanho da resposta (máximo 500 caracteres para ser conciso)
+    # Mas preservar separadores se possível
+    if len(answer) > 500:
+        # Encontrar último ponto antes de 500 caracteres
+        last_period = answer.rfind('.', 0, 500)
+        if last_period > 300:  # Se encontrou ponto razoável
+            answer = answer[:last_period + 1]
+        else:
+            # Se não encontrou, cortar em 500 e adicionar "..."
+            answer = answer[:497] + "..."
     
     # Se a resposta começa com vírgula ou ponto, remover
     answer = re.sub(r'^[.,]\s*', '', answer)
@@ -1031,15 +1609,42 @@ def get_chef_response(
     """
     Obtém resposta do Chef Virtual para uma pergunta
     
+    FASE 3: Implementa cache de respostas para perguntas comuns.
+    
     Args:
         question: Pergunta do usuário
         rag_service: Instância do RAGService
         user_id: ID do usuário (opcional)
         db: Sessão do banco de dados (opcional)
+        audio_url: URL do áudio (opcional)
     
     Returns:
         Dicionário com resposta, metadados e validação
     """
+    # CRÍTICO: Detectar interações sociais (cumprimentos, agradecimentos) ANTES de buscar RAG
+    # Se for cumprimento, retornar resposta simples sem buscar documentos
+    social_response = detect_social_interaction(question)
+    if social_response:
+        logger.info(f"Interação social detectada: '{question}' → resposta direta")
+        return {
+            "answer": social_response,
+            "audio_url": None,
+            "sources": [],
+            "validation": {
+                "confidence_score": 1.0,
+                "error": False,
+                "error_message": None
+            }
+        }
+    
+    # FASE 3: Verificar cache antes de processar
+    cache = get_response_cache()
+    if should_cache_query(question):
+        cached_response = cache.get(question, user_id=user_id)
+        if cached_response:
+            logger.info(f"Resposta retornada do CACHE para: '{question[:50]}...'")
+            return cached_response
+    
     # Criar chain
     chain = create_chef_chain(rag_service, user_id, db)
     
@@ -1050,6 +1655,12 @@ def get_chef_response(
     # 1. Pergunta menciona "restaurante" ou "restaurantes"
     # 2. Pergunta contém palavras que podem ser nomes de restaurantes (palavras com mais de 3 letras)
     # 3. Pergunta pede algo específico (ex: "McDonald's", "pizza", "italiano")
+    # FASE 2: Expansão de Query com Sinônimos
+    expanded_question = question
+    if should_expand_query(question):
+        expanded_question = expand_query_with_synonyms(question, max_expansions=3)
+        logger.info(f"Query expandida: '{question}' → '{expanded_question}'")
+    
     use_hybrid = (
         'restaurante' in question_lower or 
         'restaurantes' in question_lower or
@@ -1057,12 +1668,229 @@ def get_chef_response(
         any(len(word) > 3 for word in question_lower.split())  # Possível nome de restaurante
     )
     
-    if use_hybrid:
-        # Usar busca híbrida (exata + semântica)
-        source_documents = rag_service.hybrid_search(question, k=8, exact_weight=0.6, semantic_weight=0.4)
-    else:
-        # Usar apenas busca semântica
-        source_documents = rag_service.similarity_search(question, k=8)
+    # FASE 2: Aumentado k de 8 para 15 para melhor recuperação de contexto
+    # CORREÇÃO: Filtrar e priorizar por correspondência semântica rigorosa
+    try:
+        if use_hybrid:
+            # Usar busca híbrida (exata + semântica) com query expandida
+            logger.info(f"Usando busca híbrida para: '{expanded_question[:100]}...'")
+            source_documents = rag_service.hybrid_search(expanded_question, k=20, exact_weight=0.7, semantic_weight=0.3)  # Mais peso para busca exata
+        else:
+            # Usar apenas busca semântica com query expandida
+            logger.info(f"Usando busca semântica para: '{expanded_question[:100]}...'")
+            source_documents = rag_service.similarity_search(expanded_question, k=20)
+        
+        # Guardar documentos originais antes do filtro (para fallback se necessário)
+        original_docs_before_filter = source_documents.copy() if source_documents else []
+        
+        # FILTRO CRÍTICO: Validar correspondência semântica rigorosa
+        question_lower = question.lower()
+        filtered_documents = []
+        
+        # Palavras-chave específicas da pergunta
+        # Filtrar stopwords mais agressivamente
+        stopwords = {'quero', 'queria', 'gostaria', 'preciso', 'um', 'uma', 'uns', 'umas', 'o', 'a', 'os', 'as', 'de', 'da', 'do', 'das', 'dos', 'em', 'na', 'no', 'nas', 'nos', 'para', 'com', 'sem', 'por', 'sobre'}
+        question_keywords = set()
+        for word in question_lower.split():
+            # Ignorar stopwords e palavras muito curtas
+            if len(word) > 3 and word not in stopwords:
+                question_keywords.add(word)
+        
+        # Mapeamento de palavras-chave para tags relevantes
+        # CORREÇÃO: Separar tags específicas (obrigatórias) de tags genéricas (opcionais)
+        keyword_to_specific_tags = {
+            'churrasco': ['churrasco', 'rodízio', 'picanha', 'churrascaria', 'carne grelhada', 'espetinho'],
+            'pizza': ['pizza', 'massa'],
+            'sushi': ['sushi', 'sashimi', 'temaki'],
+            'hamburguer': ['hamburguer', 'burger', 'hamburgueria'],
+            'feijoada': ['feijoada'],
+            'risoto': ['risoto'],
+            'açaí': ['açaí', 'acai', 'açai', 'sorvete', 'gelato'],
+            'acai': ['açaí', 'acai', 'açai', 'sorvete', 'gelato'],
+            'açai': ['açaí', 'acai', 'açai', 'sorvete', 'gelato'],
+        }
+        
+        # Tags genéricas (culinárias) - só aceitar se correspondência direta
+        keyword_to_cuisine_tags = {
+            'italiana': ['italiana'],
+            'japonesa': ['japonesa'],
+            'brasileira': ['brasileira'],
+            'mexicana': ['mexicana'],
+            'chinesa': ['chinesa'],
+        }
+        
+        # Identificar se a query é específica (prato) ou genérica (culinária)
+        is_specific_query = any(kw in keyword_to_specific_tags for kw in question_keywords)
+        is_cuisine_query = any(kw in keyword_to_cuisine_tags for kw in question_keywords)
+        
+        # Expandir palavras-chave com tags relevantes
+        specific_tags = set()
+        cuisine_tags = set()
+        
+        for keyword in question_keywords:
+            if keyword in keyword_to_specific_tags:
+                specific_tags.update(keyword_to_specific_tags[keyword])
+            if keyword in keyword_to_cuisine_tags:
+                cuisine_tags.update(keyword_to_cuisine_tags[keyword])
+            # Adicionar palavra original apenas se for relevante (não stopword genérica)
+            # CORREÇÃO: Não adicionar palavras genéricas como "gourmet", "bom", "melhor" que podem causar matches incorretos
+            generic_words = {'gourmet', 'bom', 'melhor', 'melhores', 'ótimo', 'otimo', 'excelente', 'top', 'show'}
+            if keyword not in ['quero', 'queria', 'gostaria', 'preciso'] and keyword not in generic_words:
+                # Só adicionar se não estiver no mapeamento (para evitar duplicatas)
+                if keyword not in keyword_to_specific_tags and keyword not in keyword_to_cuisine_tags:
+                    specific_tags.add(keyword)
+        
+        logger.debug(f"Query específica: {is_specific_query}, Query culinária: {is_cuisine_query}")
+        logger.debug(f"Tags específicas para '{question}': {specific_tags}")
+        logger.debug(f"Tags culinárias para '{question}': {cuisine_tags}")
+        
+        # Filtrar documentos por correspondência de tags (FILTRO RIGOROSO)
+        for doc in source_documents:
+            metadata = doc.metadata if hasattr(doc, 'metadata') else {}
+            
+            if metadata.get('type') == 'restaurant':
+                # Verificar tags do restaurante
+                keywords = metadata.get('keywords', '').lower()
+                cuisine = metadata.get('cuisine_type', '').lower()
+                name = metadata.get('name', '').lower()
+                description = (metadata.get('description', '') or '').lower()
+                
+                # Verificar correspondência
+                has_match = False
+                match_reason = []
+                
+                # PRIORIDADE 1: Verificar keywords (mais específico)
+                if keywords:
+                    # Melhorar parsing de keywords (pode ter vírgula ou espaço)
+                    doc_tags = set([t.strip() for t in keywords.replace(',', ' ').split() if len(t.strip()) > 2])
+                    keyword_match = specific_tags & doc_tags
+                    if keyword_match:
+                        has_match = True
+                        match_reason.append(f"keywords: {keyword_match}")
+                    
+                    # MELHORIA: Também verificar correspondência parcial (ex: "churrasco" em "churrascaria")
+                    # CORREÇÃO: Ser mais restritivo - apenas tags principais, não palavras genéricas
+                    if not has_match and is_specific_query:
+                        # Apenas verificar tags principais do mapeamento, não palavras genéricas como "gourmet"
+                        main_tags = set()
+                        for kw in question_keywords:
+                            if kw in keyword_to_specific_tags:
+                                main_tags.update(keyword_to_specific_tags[kw])
+                        
+                        for tag in main_tags:  # Apenas tags principais
+                            if any(tag in kw or kw in tag for kw in doc_tags):
+                                has_match = True
+                                match_reason.append(f"keywords parcial: {tag}")
+                                break
+                
+                # PRIORIDADE 2: Verificar nome (para casos específicos como "Churrascaria X")
+                # CORREÇÃO: Usar apenas tags principais do mapeamento, não palavras genéricas
+                if name and not has_match:
+                    # Apenas tags principais do mapeamento
+                    main_tags = set()
+                    for kw in question_keywords:
+                        if kw in keyword_to_specific_tags:
+                            main_tags.update(keyword_to_specific_tags[kw])
+                    
+                    name_match = [tag for tag in main_tags if tag in name]
+                    if name_match:
+                        has_match = True
+                        match_reason.append(f"nome: {name_match}")
+                
+                # PRIORIDADE 3: Verificar descrição (se contém tags específicas)
+                # CORREÇÃO: Usar apenas tags principais do mapeamento
+                if description and is_specific_query and not has_match:
+                    # Apenas tags principais do mapeamento
+                    main_tags = set()
+                    for kw in question_keywords:
+                        if kw in keyword_to_specific_tags:
+                            main_tags.update(keyword_to_specific_tags[kw])
+                    
+                    desc_match = [tag for tag in main_tags if tag in description]
+                    if desc_match:
+                        has_match = True
+                        match_reason.append(f"descrição: {desc_match}")
+                
+                # PRIORIDADE 4: Verificar tipo de culinária (APENAS se correspondência direta)
+                # CORREÇÃO CRÍTICA: Se query é específica (churrasco), NÃO aceitar apenas por culinária genérica
+                if cuisine:
+                    # Se é query de culinária (ex: "italiana"), aceitar correspondência direta
+                    if is_cuisine_query and cuisine in cuisine_tags:
+                        has_match = True
+                        match_reason.append(f"culinária direta: {cuisine}")
+                    # Se é query específica (ex: "churrasco"), NÃO aceitar apenas por "brasileira"
+                    # Só aceitar se também tiver keywords ou nome correspondente
+                    elif is_specific_query:
+                        # Não aceitar apenas por culinária genérica
+                        pass
+                    # Se não é nem específica nem culinária, aceitar correspondência parcial
+                    elif not is_specific_query and not is_cuisine_query:
+                        if any(tag in cuisine for tag in specific_tags):
+                            has_match = True
+                            match_reason.append(f"culinária parcial: {cuisine}")
+                
+                if has_match:
+                    filtered_documents.append(doc)
+                    logger.debug(f"✅ {metadata.get('name')} - Match: {', '.join(match_reason)}")
+                else:
+                    logger.debug(f"❌ {metadata.get('name')} - Sem correspondência (tags: {keywords}, culinária: {cuisine})")
+            else:
+                # Documentos não-restaurante sempre incluir (conhecimento estático)
+                filtered_documents.append(doc)
+        
+        # Limitar a 10 documentos mais relevantes após filtro
+        source_documents = filtered_documents[:10]
+        
+        logger.info(f"Documentos encontrados: {len(source_documents)} (após filtro semântico de {len(filtered_documents)} candidatos)")
+        
+        # MELHORIA: Se filtro muito restritivo não encontrou nada, usar busca mais ampla
+        if len(source_documents) == 0 and len(original_docs_before_filter) > 0:
+            logger.warning(f"Nenhum documento com correspondência semântica encontrado para: '{question}'")
+            logger.info("Tentando busca mais ampla (sem filtro semântico rigoroso)...")
+            
+            # Fallback: usar documentos originais sem filtro muito restritivo
+            # Aplicar apenas filtro básico por culinária se for query de culinária
+            if is_cuisine_query and cuisine_tags:
+                fallback_docs = []
+                for doc in original_docs_before_filter[:20]:  # Usar mais documentos
+                    metadata = doc.metadata if hasattr(doc, 'metadata') else {}
+                    if metadata.get('type') == 'restaurant':
+                        cuisine = metadata.get('cuisine_type', '').lower()
+                        if cuisine in cuisine_tags:
+                            fallback_docs.append(doc)
+                    else:
+                        fallback_docs.append(doc)
+                
+                if len(fallback_docs) > 0:
+                    source_documents = fallback_docs[:10]
+                    logger.info(f"Fallback encontrou {len(source_documents)} documentos com culinária correspondente")
+            elif not is_specific_query:
+                # Se não é query específica, usar documentos originais (menos restritivo)
+                # MAS: apenas se não houver palavras-chave específicas na pergunta
+                # CORREÇÃO: Não usar fallback genérico se a pergunta menciona prato específico não mapeado
+                has_unmapped_specific_keywords = any(
+                    kw in question_lower for kw in ['açaí', 'acai', 'açai', 'sorvete', 'gelato', 
+                                                     'tapioca', 'coxinha', 'pastel', 'empada', 
+                                                     'brigadeiro', 'beijinho', 'quindim']
+                )
+                if not has_unmapped_specific_keywords:
+                    source_documents = original_docs_before_filter[:10]
+                    logger.info(f"Fallback usando {len(source_documents)} documentos originais (query não específica)")
+                else:
+                    # Query menciona prato específico não mapeado - não usar fallback genérico
+                    source_documents = []
+                    logger.info(f"Query específica não mapeada detectada - não usando fallback genérico")
+        
+        if len(source_documents) == 0:
+            logger.warning(f"Nenhum documento encontrado após filtro e fallback para: '{question}'")
+            logger.info("Continuando sem documentos - LLM usará conhecimento geral")
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"Erro na busca RAG: {type(e).__name__}: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        # Continuar com lista vazia - LLM pode usar conhecimento geral
+        source_documents = []
     
     # Verificar se há contexto suficiente
     restaurant_docs = [doc for doc in source_documents 
@@ -1074,47 +1902,84 @@ def get_chef_response(
         'melhor', 'melhores', 'top', 'favorito', 'favoritos'
     ])
     
-    # Fallback se não houver contexto relevante
-    # Mas se houver recomendações e a pergunta for sobre recomendações, usar a chain (já tem recomendações no prompt)
-    if len(restaurant_docs) == 0 and ('restaurante' in question_lower or 'restaurantes' in question_lower):
-        # Se a pergunta é sobre recomendações, a chain já tem recomendações no prompt
-        # Então podemos continuar mesmo sem documentos de restaurantes
-        if not is_recommendation_request:
-            fallback_message = (
-                "Não encontrei restaurantes específicos no momento. "
-                "Que tal perguntar sobre tipos de culinária ou suas preferências gastronômicas?"
+    # CORREÇÃO CRÍTICA: Se é query específica (prato específico) e não encontrou restaurantes relevantes,
+    # retornar mensagem clara ao invés de deixar LLM inventar recomendações não relacionadas
+    # Verificar se é query específica (prato específico como "açaí", "churrasco", etc.)
+    specific_dish_keywords = [
+        'açaí', 'acai', 'açai', 'churrasco', 'picanha', 'pizza', 'sushi', 'hamburguer',
+        'feijoada', 'risoto', 'sorvete', 'gelato', 'tapioca', 'coxinha', 'pastel',
+        'sopa', 'sopas'
+    ]
+    is_specific_dish_query = any(kw in question_lower for kw in specific_dish_keywords)
+    
+    if len(restaurant_docs) == 0:
+        if is_specific_dish_query:
+            # Query específica sem match - retornar mensagem clara
+            dish_name = next((kw for kw in specific_dish_keywords if kw in question_lower), "isso")
+            logger.warning(
+                f"Query específica '{question}' não encontrou restaurantes relevantes. "
+                "Retornando mensagem clara ao invés de deixar LLM inventar."
             )
-            
             return {
-                "answer": fallback_message,
-                "source_documents": [
-                    {
-                        "content": doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content,
-                        "metadata": doc.metadata if hasattr(doc, 'metadata') else {}
-                    }
-                    for doc in source_documents
-                ],
+                "answer": (
+                    f"Olá! Infelizmente não encontrei restaurantes que sirvam {dish_name} na minha base de dados no momento.\n\n"
+                    f"Se você souber de algum lugar que serve {dish_name}, posso ajudar com outras informações sobre restaurantes e comida!\n\n"
+                    "Quer que eu busque outras opções?"
+                ),
+                "audio_url": None,
+                "sources": [],
                 "validation": {
                     "confidence_score": 0.0,
-                    "total_sources": len(source_documents),
-                    "restaurant_sources": 0,
-                    "mentioned_restaurants": [],
-                    "valid_mentions": [],
-                    "invalid_mentions": [],
-                    "has_potential_hallucination": False,
-                    "used_fallback": True
+                    "error": False,
+                    "error_message": None
                 }
             }
+        else:
+            # Query não específica - continuar normalmente
+            logger.info(
+                f"Nenhum documento de restaurante encontrado para pergunta: {question[:100]}... "
+                f"Total de documentos: {len(source_documents)}. Continuando com chain (pode usar recomendações ou conhecimento geral)."
+            )
     
     # Criar callback de monitoramento
     monitoring_callback = LLMMonitoringCallback(user_id=user_id, question=question)
     
     # Executar chain com callback de monitoramento
     try:
-        answer = chain.invoke(question, config={"callbacks": [monitoring_callback]})
+        logger.info(f"Invocando chain LLM para pergunta: '{question[:100]}...'")
+        logger.info(f"Chain criada: {type(chain).__name__}")
+        logger.info(f"RAG Service vector_store inicializado: {rag_service.vector_store is not None}")
+        
+        try:
+            # Testar se chain está funcionando antes de invocar
+            logger.debug("Testando chain antes de invocar...")
+            answer = chain.invoke(question, config={"callbacks": [monitoring_callback]})
+            
+            if not answer or len(answer.strip()) == 0:
+                logger.warning("Resposta do LLM está vazia!")
+                raise ValueError("Resposta do LLM está vazia")
+            
+            logger.info(f"Resposta do LLM gerada com sucesso ({len(answer)} caracteres)")
+            logger.debug(f"Primeiros 200 caracteres da resposta: {answer[:200]}...")
+            
+        except Exception as e:
+            import traceback
+            error_traceback = traceback.format_exc()
+            logger.error("=" * 60)
+            logger.error("❌ ERRO AO INVOCAR CHAIN LLM")
+            logger.error("=" * 60)
+            logger.error(f"Tipo de erro: {type(e).__name__}")
+            logger.error(f"Mensagem: {str(e)}")
+            logger.error(f"Pergunta: {question}")
+            logger.error(f"Traceback completo:\n{error_traceback}")
+            logger.error("=" * 60)
+            raise  # Re-raise para ser capturado pelo handler em chat.py
     except Exception as e:
         # Em caso de erro, registrar no callback
-        monitoring_callback.on_llm_error(e)
+        try:
+            monitoring_callback.on_llm_error(e)
+        except:
+            pass  # Não falhar se callback também falhar
         raise
     
     # Obter métricas do callback (passar resposta para cálculo correto de tamanho)
@@ -1125,8 +1990,7 @@ def get_chef_response(
         log_llm_metrics(metrics, db=db, save_to_db=True)
     except Exception as e:
         # Não falhar se houver erro ao salvar métricas
-        from app.core.logging_config import get_logger
-        logger = get_logger(__name__)
+        # Usar logger global, não redefinir
         logger.warning(f"Erro ao salvar métricas LLM: {e}")
     
     # Obter nome do usuário para limpeza
@@ -1136,11 +2000,59 @@ def get_chef_response(
         if user:
             user_name_for_cleaning = user.name
     
-    # Limpar resposta removendo frases proibidas e repetições
-    answer = clean_answer(answer, user_name=user_name_for_cleaning, question=question)
+    # PILAR 1: Limpeza de artefatos de markdown (primeiro passo)
+    cleaned_answer = clean_markdown_artifacts(answer)
+    
+    # NOVO: Limpar metadados técnicos que podem vazar do contexto RAG
+    cleaned_answer = clean_technical_metadata(cleaned_answer)
+    
+    # Limpar resposta removendo frases proibidas e repetições (preservar separadores)
+    cleaned_answer = clean_answer(cleaned_answer, user_name=user_name_for_cleaning, question=question)
     
     # Corrigir referências vagas a restaurantes ("Eles têm" sem mencionar o restaurante)
-    answer = fix_vague_restaurant_references(answer, source_documents)
+    cleaned_answer = fix_vague_restaurant_references(cleaned_answer, source_documents)
+    
+    # PILAR 2: Validação estrutural estrita e lógica invertida ("na dúvida, reformate")
+    # Pós-processamento: Aplicar formatação visual se o LLM não seguiu as instruções
+    # (Solução para limitação de modelos menores como Llama 3.1 8B)
+    try:
+        from app.core.format_response import apply_visual_formatting, extract_restaurant_mentions
+        
+        # Verificar se há restaurantes nos documentos (sempre aplicar formatação se houver)
+        restaurant_docs = [doc for doc in source_documents 
+                          if (doc.metadata if hasattr(doc, 'metadata') else {}).get('type') == 'restaurant']
+        
+        # Verificar se há restaurantes mencionados na resposta
+        restaurant_mentions = extract_restaurant_mentions(cleaned_answer, source_documents)
+        
+        # LÓGICA INVERTIDA: Na dúvida, reformate
+        # SEMPRE aplicar formatação visual se:
+        # 1. Há restaurantes nos documentos E/OU mencionados na resposta
+        # 2. OU a resposta não é estruturalmente válida
+        should_format = (
+            len(restaurant_docs) > 0 or 
+            len(restaurant_mentions) > 0 or
+            not is_structurally_valid(cleaned_answer)
+        )
+        
+        if should_format:
+            logger.info(f"Aplicando pós-processamento: {len(restaurant_docs)} restaurantes encontrados, {len(restaurant_mentions)} mencionados")
+            answer = apply_visual_formatting(cleaned_answer, source_documents, question)
+        else:
+            answer = cleaned_answer
+        
+        # NOVO: Limpar metadados técnicos da resposta final (mesmo após pós-processamento)
+        answer = clean_technical_metadata(answer)
+        
+        # Limpeza final de artefatos que possam ter sobrado
+        answer = clean_markdown_artifacts(answer)
+    except Exception as e:
+        import traceback
+        logger.warning(f"Erro ao aplicar formatação visual: {str(e)}")
+        logger.debug(f"Traceback: {traceback.format_exc()}")
+        # Continuar com resposta limpa se houver erro
+        answer = clean_technical_metadata(cleaned_answer)
+        answer = clean_markdown_artifacts(answer)
     
     # Validação adicional: verificar se a resposta está relacionada a comida/restaurantes
     answer_lower = answer.lower()
@@ -1169,6 +2081,21 @@ def get_chef_response(
         "gringa", "hospedagem", "netflix", "streaming", "show", "concerto"
     ]
     
+    # Frases vagas e genéricas a remover
+    vague_phrases = [
+        r'\bpodem ser uma boa escolha\b',
+        r'\bpode ser uma boa opção\b',
+        r'\bessas opções podem\b',
+        r'\bqualquer uma dessas opções\b',
+        r'\bessas são apenas algumas\b',
+        r'\bvocê pode considerar\b',
+        r'\bvocê pode gostar\b',
+    ]
+    
+    # Remover frases vagas
+    for phrase in vague_phrases:
+        answer = re.sub(phrase, '', answer, flags=re.IGNORECASE)
+    
     has_food_content = any(keyword in answer_lower for keyword in food_keywords_in_answer)
     has_out_of_scope_content = any(indicator in answer_lower for indicator in out_of_scope_indicators)
     
@@ -1179,43 +2106,172 @@ def get_chef_response(
             "Como posso ajudá-lo a encontrar um restaurante ou prato hoje?"
         )
     
-    # Validar resposta contra o contexto e banco de dados
-    validation = validate_answer_against_context(answer, source_documents, db=db)
+    # VALIDAÇÃO CRÍTICA: Verificar se restaurantes mencionados correspondem à pergunta
+    # Extrair restaurantes mencionados na resposta
+    mentioned_restaurants = extract_restaurant_names_from_text(answer)
     
-    # Se detectar alucinação potencial, tomar ação mais rigorosa
-    if validation["has_potential_hallucination"]:
-        invalid_count = len(validation["invalid_mentions"])
-        valid_count = len(validation["valid_mentions"])
-        total_mentioned = len(validation["mentioned_restaurants"])
+    if mentioned_restaurants and question:
+        # Verificar correspondência semântica
+        question_lower = question.lower()
+        invalid_restaurants = []
         
-        # Se a maioria dos restaurantes mencionados são inválidos, substituir resposta
-        if invalid_count > valid_count and total_mentioned > 0:
-            # Remover menções inválidas da resposta ou substituir por resposta genérica
-            answer = (
-                "Alguns restaurantes mencionados não estão disponíveis no momento. "
-                "Como posso ajudá-lo a encontrar um restaurante ou prato hoje?"
-            )
-        else:
-            # Se apenas alguns são inválidos, adicionar aviso (mas verificar se já não existe)
-            # Não adicionar aviso na resposta - já está no rodapé do frontend
-            # O aviso foi movido para o rodapé fixo do componente
-            pass
+        # Mapeamento de palavras-chave para tags (mesmo do filtro RAG)
+        keyword_to_tags = {
+            'churrasco': ['churrasco', 'rodízio', 'picanha', 'churrascaria'],
+            'pizza': ['pizza', 'massa', 'italiana'],
+            'sushi': ['sushi', 'japonesa', 'sashimi'],
+            'hamburguer': ['hamburguer', 'burger', 'hamburgueria'],
+        }
+        
+        # Identificar tags relevantes da pergunta
+        relevant_tags = set()
+        for keyword, tags in keyword_to_tags.items():
+            if keyword in question_lower:
+                relevant_tags.update(tags)
+        
+        # Validar cada restaurante mencionado
+        for restaurant_name in mentioned_restaurants:
+            # Buscar restaurante no contexto
+            restaurant_doc = None
+            for doc in source_documents:
+                metadata = doc.metadata if hasattr(doc, 'metadata') else {}
+                if metadata.get('name', '').lower() == restaurant_name.lower():
+                    restaurant_doc = doc
+                    break
+            
+            if restaurant_doc:
+                metadata = restaurant_doc.metadata if hasattr(restaurant_doc, 'metadata') else {}
+                keywords = metadata.get('keywords', '').lower()
+                cuisine = metadata.get('cuisine_type', '').lower()
+                
+                # Verificar se tem correspondência semântica
+                has_match = False
+                if keywords and relevant_tags:
+                    doc_tags = set(keywords.split(', '))
+                    if relevant_tags & doc_tags:
+                        has_match = True
+                
+                if not has_match and relevant_tags:
+                    invalid_restaurants.append(restaurant_name)
+                    logger.warning(f"⚠️  Restaurante '{restaurant_name}' mencionado mas sem correspondência semântica com '{question}' (tags: {keywords})")
+        
+        # Remover recomendações inválidas da resposta
+        if invalid_restaurants:
+            for invalid_name in invalid_restaurants:
+                # Remover sentença que menciona restaurante inválido
+                pattern = rf'[^.!?]*\b{re.escape(invalid_name)}\b[^.!?]*[.!?]'
+                answer = re.sub(pattern, '', answer, flags=re.IGNORECASE)
+                logger.info(f"🗑️  Removida recomendação inválida: {invalid_name}")
+            
+            # Limpar espaços duplos
+            answer = re.sub(r'\s+', ' ', answer).strip()
+    
+    # Validar resposta contra o contexto e banco de dados
+    validation = None
+    try:
+        validation = validate_answer_against_context(answer, source_documents, db=db)
+        
+        # Se detectar alucinação potencial, tomar ação mais rigorosa
+        if validation.get("has_potential_hallucination", False):
+            invalid_count = len(validation.get("invalid_mentions", []))
+            valid_count = len(validation.get("valid_mentions", []))
+            total_mentioned = len(validation.get("mentioned_restaurants", []))
+            
+            # Se a maioria dos restaurantes mencionados são inválidos, substituir resposta
+            if invalid_count > valid_count and total_mentioned > 0:
+                # Remover menções inválidas da resposta ou substituir por resposta genérica
+                answer = (
+                    "Alguns restaurantes mencionados não estão disponíveis no momento. "
+                    "Como posso ajudá-lo a encontrar um restaurante ou prato hoje?"
+                )
+            else:
+                # Se apenas alguns são inválidos, adicionar aviso (mas verificar se já não existe)
+                # Não adicionar aviso na resposta - já está no rodapé do frontend
+                # O aviso foi movido para o rodapé fixo do componente
+                pass
+    except Exception as e:
+        import traceback
+        logger.warning(f"Erro ao validar resposta contra contexto: {type(e).__name__}: {str(e)}")
+        logger.debug(f"Traceback: {traceback.format_exc()}")
+        # Continuar com validação vazia se houver erro
+        validation = {
+            "confidence_score": 0.0,
+            "has_potential_hallucination": False,
+            "mentioned_restaurants": [],
+            "valid_mentions": [],
+            "invalid_mentions": []
+        }
     
     # Adicionar ao histórico
     if user_id:
-        add_to_conversation_history(user_id, question, answer, db=db, audio_url=audio_url)
+        try:
+            add_to_conversation_history(user_id, question, answer, db=db, audio_url=audio_url)
+        except Exception as e:
+            import traceback
+            logger.warning(f"Erro ao adicionar ao histórico: {type(e).__name__}: {str(e)}")
+            logger.debug(f"Traceback: {traceback.format_exc()}")
+            # Não falhar se houver erro ao salvar histórico
     
-    return {
-        "answer": answer,
-        "source_documents": [
-            {
-                "content": doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content,
-                "metadata": doc.metadata if hasattr(doc, 'metadata') else {}
+    # Adicionar call-to-action se houver restaurantes recomendados
+    # REMOVIDO: Seção "Próximos Passos" não deve aparecer para o usuário
+    # if mentioned_restaurants and len(mentioned_restaurants) > 0:
+    #     # Verificar se já não há call-to-action na resposta
+    #     if 'próximos passos' not in answer.lower() and 'cardápio' not in answer.lower():
+    #         answer += "\n\n📱 **Próximos Passos:**\n"
+    #         answer += "   Digite 'cardápio [nome]' ou 'preços [nome]' para mais detalhes."
+    
+    # Construir resposta final
+    try:
+        response = {
+            "answer": answer,
+            "source_documents": [
+                {
+                    "content": doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content,
+                    "metadata": doc.metadata if hasattr(doc, 'metadata') else {}
+                }
+                for doc in source_documents
+            ],
+            "validation": validation or {
+                "confidence_score": 0.0,
+                "has_potential_hallucination": False,
+                "mentioned_restaurants": [],
+                "valid_mentions": [],
+                "invalid_mentions": []
             }
-            for doc in source_documents
-        ],
-        "validation": validation
-    }
+        }
+    except Exception as e:
+        import traceback
+        logger.error(f"Erro ao construir resposta final: {type(e).__name__}: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        # Retornar resposta mínima se houver erro
+        response = {
+            "answer": answer,
+            "source_documents": [],
+            "validation": {
+                "confidence_score": 0.0,
+                "has_potential_hallucination": False,
+                "mentioned_restaurants": [],
+                "valid_mentions": [],
+                "invalid_mentions": []
+            }
+        }
+    
+    # FASE 3: Cachear resposta se apropriado
+    try:
+        if should_cache_query(question):
+            cache = get_response_cache()
+            cache.set(question, response, user_id=user_id)
+    except Exception as e:
+        import traceback
+        logger.warning(f"Erro ao cachear resposta: {type(e).__name__}: {str(e)}")
+        logger.debug(f"Traceback: {traceback.format_exc()}")
+        # Não falhar se houver erro ao cachear
+    
+    # Log final para debug
+    logger.info(f"Resposta final gerada com sucesso: {len(response.get('answer', ''))} caracteres")
+    logger.debug(f"Estrutura da resposta: answer={bool(response.get('answer'))}, sources={len(response.get('source_documents', []))}, validation={bool(response.get('validation'))}")
+    
+    return response
 
 
 def detect_social_interaction(message: str) -> Optional[str]:
@@ -1252,6 +2308,28 @@ def detect_social_interaction(message: str) -> Optional[str]:
         "até logo", "atelogo", "até mais", "atemais", "até breve", "atebreve"
     ]
     
+    # Perguntas sobre identidade/nome do agente (VERIFICAR PRIMEIRO)
+    identity_keywords = [
+        "qual seu nome", "qual é seu nome", "qual o seu nome",
+        "quem é você", "quem voce", "quem voce e",
+        "você é", "voce e", "você é quem", "voce e quem",
+        "como você se chama", "como voce se chama",
+        "me diga seu nome", "me diga o seu nome",
+        "what's your name", "who are you", "what are you"
+    ]
+    
+    # Verificar perguntas sobre identidade (PRIORIDADE: antes de tudo)
+    for identity_kw in identity_keywords:
+        if identity_kw in message_lower:
+            responses = [
+                "Sou o Chef Virtual! Quer que eu recomende algo?",
+                "Sou o Chef Virtual do TasteMatch. Em que posso ajudar?",
+                "Sou o Chef Virtual! Posso ajudar com restaurantes e comida. O que você procura?",
+                "Sou o Chef Virtual! Quer que eu recomende algum restaurante?",
+                "Sou o Chef Virtual do TasteMatch. Como posso ajudar você hoje?"
+            ]
+            return random.choice(responses)
+    
     # Verificar agradecimentos
     gratitude_count = sum(1 for word in words if any(kw in word for kw in gratitude_keywords))
     if gratitude_count > 0:
@@ -1266,21 +2344,26 @@ def detect_social_interaction(message: str) -> Optional[str]:
             ]
             return random.choice(responses)
     
-    # Verificar saudações simples (sem pergunta)
+    # Verificar saudações simples (incluindo "tudo bem?")
     greeting_count = sum(1 for word in words if any(kw in word for kw in greeting_keywords))
-    if greeting_count > 0 and len(words) <= 3:  # Saudações curtas
-        # Verificar se não há pergunta junto
-        question_indicators = ["?", "qual", "quais", "onde", "como", "quando", "quanto"]
-        has_question = any(ind in message_lower for ind in question_indicators)
+    # Incluir "tudo bem?" mesmo com interrogação (é saudação, não pergunta real)
+    is_greeting_question = any(kw in message_lower for kw in ["tudo bem", "tudobem", "td bem", "tdbem"])
+    
+    if (greeting_count > 0 and len(words) <= 3) or is_greeting_question:  # Saudações curtas ou "tudo bem?"
+        # Verificar se não há pergunta real junto (exceto "tudo bem?")
+        question_indicators = ["qual", "quais", "onde", "como", "quando", "quanto"]
+        has_real_question = any(ind in message_lower for ind in question_indicators)
         
-        if not has_question:
-            # Respostas baseadas no horário (se possível) ou genéricas
+        # "tudo bem?" é saudação, não pergunta real
+        if not has_real_question or is_greeting_question:
+            # Respostas simples e diretas para cumprimentos
+            # NÃO mencionar restaurantes ou comida, apenas cumprimentar e perguntar como ajudar
             responses = [
-                "Olá! Como posso ajudá-lo a encontrar um restaurante hoje?",
+                "Olá! Em que posso ajudar?",
+                "Oi! Como posso ajudar?",
+                "Olá! Em que posso ajudar hoje?",
                 "Oi! Em que posso ajudar com restaurantes e comida?",
-                "Olá! Que tipo de comida você está procurando?",
-                "Oi! Pronto para descobrir novos restaurantes?",
-                "Olá! Como posso ajudá-lo hoje?"
+                "Olá! Como posso ajudar?"
             ]
             return random.choice(responses)
     
@@ -1371,10 +2454,10 @@ def validate_question(question: str) -> tuple[bool, Optional[str]]:
                 "Como posso ajudá-lo a encontrar um restaurante, prato ou receita hoje?"
             )
     
-    # Validação positiva: verificar se a pergunta está relacionada a comida/restaurantes
-    # Se não houver palavras relacionadas a comida, mas também não houver palavras fora do escopo,
-    # ainda permitir (pode ser uma pergunta genérica que o LLM pode redirecionar)
-    has_food_keyword = any(keyword in question_lower for keyword in food_related_keywords)
+    # CORREÇÃO: Validação menos restritiva
+    # Permitir perguntas sobre comida/restaurantes mesmo sem palavras-chave explícitas
+    # O LLM pode lidar melhor com perguntas genéricas e redirecionar quando necessário
+    # Apenas rejeitar se for claramente fora do escopo (já verificado acima)
     
     # Verificar se a pergunta não está vazia
     if not question.strip():
@@ -1384,5 +2467,8 @@ def validate_question(question: str) -> tuple[bool, Optional[str]]:
     if len(question) > 1000:
         return False, "Sua pergunta é muito longa. Por favor, seja mais conciso."
     
+    # Se chegou aqui e não foi rejeitada por palavras inapropriadas ou fora do escopo,
+    # permitir a pergunta (mesmo que não tenha palavras-chave explícitas de comida)
+    # O LLM será responsável por responder adequadamente ou redirecionar
     return True, None
 

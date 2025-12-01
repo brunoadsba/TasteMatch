@@ -178,11 +178,12 @@ async def chat(
         )
     
     # Obter RAG service
+    # Usar eager=True para reutilizar instância global criada no startup (mais rápido)
     try:
         connection_string = settings.DATABASE_URL
-        logger.info(f"Inicializando RAG service com connection_string: ...@{connection_string.split('@')[-1] if '@' in connection_string else connection_string[:50]}")
-        rag_service = get_rag_service(db, connection_string)
-        logger.info("RAG service inicializado com sucesso")
+        logger.debug(f"Obtendo RAG service (eager mode - reutiliza instância global se disponível)")
+        rag_service = get_rag_service(db, connection_string, eager=True)
+        logger.debug("RAG service obtido com sucesso")
     except ValueError as e:
         # Erros de validação (requisitos não atendidos) - mensagens mais claras
         error_msg = str(e)
@@ -247,14 +248,91 @@ async def chat(
         # Re-raise HTTP exceptions (já formatadas corretamente)
         raise
     except Exception as e:
+        # CORREÇÃO: Em vez de retornar erro 500, retornar resposta fallback útil
         # Log completo do erro para debug
         import traceback
         error_traceback = traceback.format_exc()
-        logger.error(f"Erro ao gerar resposta do Chef: {str(e)}\n{error_traceback}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao gerar resposta: {str(e)}"
+        
+        # Log detalhado do erro com contexto
+        logger.error("=" * 60)
+        logger.error("❌ ERRO AO GERAR RESPOSTA DO CHEF")
+        logger.error("=" * 60)
+        logger.error(f"Pergunta do usuário: {user_question}")
+        logger.error(f"Tipo de erro: {type(e).__name__}")
+        logger.error(f"Mensagem de erro: {str(e)}")
+        logger.error(f"Traceback completo:\n{error_traceback}")
+        logger.error("=" * 60)
+        
+        # MELHORIA: Resposta fallback mais inteligente baseada na pergunta
+        # Tentar extrair intenção da pergunta para dar resposta mais útil
+        question_lower = user_question.lower()
+        
+        # Detectar tipo de pergunta
+        if any(word in question_lower for word in ['churrasco', 'picanha', 'rodízio', 'rodizio']):
+            fallback_answer = (
+                "Entendi que você está procurando churrasco! 🥩\n\n"
+                "Infelizmente não encontrei restaurantes específicos no momento, mas posso te ajudar:\n\n"
+                "• Churrascarias geralmente oferecem rodízio com variedade de carnes\n"
+                "• Procure por restaurantes brasileiros especializados em carnes grelhadas\n"
+                "• Algumas opções comuns incluem picanha, costela, linguiça e frango\n\n"
+                "Quer que eu busque outras opções ou você tem alguma preferência específica?"
+            )
+        elif any(word in question_lower for word in ['pizza', 'massa', 'italiana']):
+            fallback_answer = (
+                "Entendi que você está procurando pizza! 🍕\n\n"
+                "Infelizmente não encontrei restaurantes específicos no momento, mas posso te ajudar:\n\n"
+                "• Pizzarias oferecem variedade de sabores e tamanhos\n"
+                "• Você pode pedir pizza tradicional, artesanal ou até mesmo doce\n\n"
+                "Quer que eu busque outras opções ou você tem alguma preferência específica?"
+            )
+        elif any(word in question_lower for word in ['sushi', 'japonesa', 'sashimi']):
+            fallback_answer = (
+                "Entendi que você está procurando comida japonesa! 🍣\n\n"
+                "Infelizmente não encontrei restaurantes específicos no momento, mas posso te ajudar:\n\n"
+                "• Restaurantes japoneses oferecem sushi, sashimi, temaki e muito mais\n"
+                "• Você pode escolher entre opções tradicionais ou contemporâneas\n\n"
+                "Quer que eu busque outras opções ou você tem alguma preferência específica?"
+            )
+        else:
+            # Resposta genérica mas mais útil
+            fallback_answer = (
+                "Entendi sua pergunta! Infelizmente não encontrei informações específicas no momento.\n\n"
+                "Posso te ajudar com:\n"
+                "• Recomendações de restaurantes por tipo de culinária\n"
+                "• Sugestões de pratos e cardápios\n"
+                "• Informações sobre preços e localizações\n\n"
+                "Que tal reformular sua pergunta? Por exemplo:\n"
+                "• 'Quero churrasco'\n"
+                "• 'Recomende uma pizzaria'\n"
+                "• 'Onde tem comida japonesa?'"
+            )
+        
+        # Salvar mensagens no histórico
+        from app.database import crud
+        crud.create_chat_message(
+            db=db,
+            user_id=current_user.id,
+            role="user",
+            content=user_question
         )
+        crud.create_chat_message(
+            db=db,
+            user_id=current_user.id,
+            role="assistant",
+            content=fallback_answer
+        )
+        db.commit()
+        
+        return {
+            "answer": fallback_answer,
+            "audio_url": None,
+            "sources": [],
+            "validation": {
+                "confidence_score": 0.0,
+                "error": True,
+                "error_message": str(e)
+            }
+        }
     
     # Gerar áudio da resposta (opcional) - após salvar no histórico
     # Se o usuário enviou áudio, gerar áudio da resposta automaticamente
