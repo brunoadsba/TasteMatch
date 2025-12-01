@@ -3,7 +3,6 @@ Alembic environment configuration.
 """
 
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
 
@@ -35,7 +34,15 @@ if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
 # Override sqlalchemy.url with settings from environment
-config.set_main_option("sqlalchemy.url", database_url)
+# IMPORTANTE: Escapar % para evitar erro de interpolação do ConfigParser
+# URLs com caracteres codificados (%23, %40, etc.) precisam ter % duplicado (%%) 
+# para o ConfigParser não tentar fazer interpolação
+database_url_escaped = database_url.replace("%", "%%")
+config.set_main_option("sqlalchemy.url", database_url_escaped)
+
+# Armazenar URL original para uso direto nas funções de migração
+# (evita problemas com unescape do ConfigParser)
+DATABASE_URL = database_url
 
 # add your model's MetaData object here
 # for 'autogenerate' support
@@ -59,10 +66,8 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
-    # Normalizar URL novamente para garantir
-    if url and url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql://", 1)
+    # Usar URL original diretamente (sem passar pelo ConfigParser)
+    url = DATABASE_URL
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -81,9 +86,10 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    # Usar URL original diretamente para criar engine (evita problemas com ConfigParser)
+    from sqlalchemy import create_engine
+    connectable = create_engine(
+        DATABASE_URL,
         poolclass=pool.NullPool,
     )
 

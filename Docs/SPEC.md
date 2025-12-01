@@ -2,7 +2,7 @@
 
 > **Agente de Recomendação Inteligente para Delivery**  
 > Documentação para desenvolvimento colaborativo (Desenvolvedor + IA)  
-> Versão: 1.1.0 | Última atualização: 2025-01-27
+> Versão: 1.2.0 | Última atualização: 2025-11-26
 
 ---
 
@@ -656,12 +656,14 @@ Authorization: Bearer <token>
 - `404 Not Found`: Usuário não encontrado
 
 **Lógica:**
-1. Verifica se há preferências cached do usuário
-2. Se não houver ou `refresh=true`, calcula novo embedding do usuário baseado no histórico
-3. Calcula similaridade com todos os restaurantes
-4. Ordena por similaridade
-5. Gera insights com LLM para top N restaurantes
-6. Retorna recomendações ordenadas
+1. Verifica se há vetor sintético do onboarding (prioridade)
+2. Se não houver, verifica se há preferências cached do usuário
+3. Se não houver ou `refresh=true`, calcula novo embedding do usuário baseado no histórico
+4. Se usuário não tem pedidos e não tem vetor sintético, retorna restaurantes populares (cold start)
+5. Calcula similaridade com todos os restaurantes
+6. Ordena por similaridade
+7. Gera insights com LLM para top N restaurantes
+8. Retorna recomendações ordenadas
 
 ---
 
@@ -785,6 +787,61 @@ Obtém detalhes de um restaurante específico.
 
 **Erros:**
 - `404 Not Found`: Restaurante não encontrado
+
+---
+
+### 5.5 Endpoints de Onboarding
+
+#### POST /api/onboarding/complete
+
+Completa o processo de onboarding do usuário, gerando um vetor sintético de preferências baseado nas escolhas iniciais (culinárias, preço, restrições alimentares).
+
+**Headers:**
+```
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Request:**
+```json
+{
+  "selected_cuisines": ["italiana", "japonesa", "brasileira"],
+  "price_preference": "medium",
+  "dietary_restrictions": ["vegan"]
+}
+```
+
+**Campos:**
+- `selected_cuisines` (obrigatório): Lista de 1-5 culinárias selecionadas
+- `price_preference` (opcional): `"low"`, `"medium"` ou `"high"`
+- `dietary_restrictions` (opcional): Lista de restrições alimentares (ex: `["vegan", "gluten-free"]`)
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Onboarding completado! Seu perfil de sabor foi criado e você já pode receber recomendações personalizadas.",
+  "has_synthetic_vector": true
+}
+```
+
+**Erros:**
+- `401 Unauthorized`: Token inválido ou ausente
+- `422 Unprocessable Entity`: Dados inválidos (ex: mais de 5 culinárias)
+- `500 Internal Server Error`: Erro ao processar onboarding
+
+**Lógica:**
+1. Valida dados de entrada (1-5 culinárias)
+2. Busca restaurantes das culinárias selecionadas
+3. Calcula centróide vetorial (média dos embeddings dos melhores restaurantes)
+4. Ajusta vetor baseado em preferência de preço (se fornecida)
+5. Salva vetor sintético no perfil do usuário (`user_preferences.preference_embedding`)
+6. Retorna confirmação de sucesso
+
+**Uso:**
+- Chamado após cadastro de novo usuário
+- Permite recomendações personalizadas desde o primeiro acesso
+- Resolve problema de "cold start" (usuários sem histórico)
 
 ---
 

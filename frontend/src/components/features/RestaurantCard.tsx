@@ -82,7 +82,7 @@ export function RestaurantCard({ restaurant, onViewInsight }: RestaurantCardProp
               </div>
               
               <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogContent className="max-w-[95vw] md:max-w-2xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle className="text-2xl">
                       {restaurant.name}
@@ -117,7 +117,7 @@ export function RestaurantCard({ restaurant, onViewInsight }: RestaurantCardProp
                         {restaurant.insight}
                       </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                       <div>
                         <span className="text-sm text-muted-foreground">Faixa de preço:</span>
                         <p className="font-medium">{formatPriceRange(restaurant.price_range)}</p>

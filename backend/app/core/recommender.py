@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session
 from app.database.crud import (
     get_user_orders,
     get_restaurants,
+    get_restaurants_for_similarity,
+    get_restaurants_metadata,
     get_user_preferences,
     create_or_update_user_preferences
 )
@@ -106,15 +108,18 @@ def calculate_user_preference_embedding(
 def extract_user_patterns(
     user_id: int,
     orders: List[Order],
-    restaurants: List[Restaurant]
+    restaurants: List[Any]  # Aceita tanto List[Restaurant] quanto List[Dict]
 ) -> Dict[str, Any]:
     """
     Extrai padrões comportamentais do usuário do histórico de pedidos.
     
+    OTIMIZAÇÃO: Aceita tanto objetos Restaurant quanto dicionários (metadados).
+    Isso permite usar get_restaurants_metadata() que é mais eficiente em memória.
+    
     Args:
         user_id: ID do usuário
         orders: Lista de pedidos do usuário
-        restaurants: Lista de restaurantes
+        restaurants: Lista de restaurantes (objetos Restaurant ou dicionários)
         
     Returns:
         dict: Padrões extraídos (culinárias favoritas, horários, ticket médio, etc.)
@@ -130,8 +135,15 @@ def extract_user_patterns(
     if not orders:
         return patterns
     
-    # Criar dicionário de restaurantes
-    restaurants_dict = {r.id: r for r in restaurants}
+    # Criar dicionário de restaurantes (compatível com objetos e dicionários)
+    restaurants_dict = {}
+    for r in restaurants:
+        if isinstance(r, dict):
+            # Se for dicionário (metadados), usar diretamente
+            restaurants_dict[r['id']] = r
+        else:
+            # Se for objeto Restaurant, usar diretamente
+            restaurants_dict[r.id] = r
     
     # Culinárias favoritas (top 3)
     cuisine_counts = Counter()
@@ -143,7 +155,10 @@ def extract_user_patterns(
     for order in orders:
         restaurant = restaurants_dict.get(order.restaurant_id)
         if restaurant:
-            cuisine_counts[restaurant.cuisine_type] += 1
+            # Compatível com objeto Restaurant ou dicionário
+            cuisine_type = restaurant.cuisine_type if hasattr(restaurant, 'cuisine_type') else restaurant.get('cuisine_type')
+            if cuisine_type:
+                cuisine_counts[cuisine_type] += 1
         
         # Contar por dia da semana
         day_counts[order.order_date.weekday()] += 1
@@ -184,10 +199,21 @@ def calculate_similarity(
     Returns:
         float: Similaridade coseno (0.0 a 1.0)
     """
-    user_vec = np.array(user_embedding).reshape(1, -1)
-    rest_vec = np.array(restaurant_embedding).reshape(1, -1)
-    similarity = cosine_similarity(user_vec, rest_vec)[0][0]
-    return float(similarity)
+    try:
+        user_vec = np.array(user_embedding).reshape(1, -1)
+        rest_vec = np.array(restaurant_embedding).reshape(1, -1)
+        similarity = cosine_similarity(user_vec, rest_vec)[0][0]
+        # Garantir que está entre 0.0 e 1.0 (pode haver imprecisão de ponto flutuante)
+        similarity = max(0.0, min(1.0, float(similarity)))
+        return similarity
+    except Exception as e:
+        logger.error(
+            f"Erro ao calcular similaridade: {e}",
+            extra={"user_embedding_len": len(user_embedding) if user_embedding else 0,
+                   "restaurant_embedding_len": len(restaurant_embedding) if restaurant_embedding else 0}
+        )
+        # Retornar 0.0 em caso de erro (não 0.5, pois indica problema)
+        return 0.0
 
 
 def get_popular_restaurants(
@@ -198,6 +224,7 @@ def get_popular_restaurants(
     """
     Retorna restaurantes populares como fallback para cold start.
     Ordena por rating (maior primeiro).
+    Calcula relevância baseada no rating normalizado (rating/5.0).
     
     Args:
         db: Sessão do banco de dados
@@ -205,7 +232,7 @@ def get_popular_restaurants(
         min_rating: Rating mínimo
         
     Returns:
-        List[Dict]: Lista de restaurantes com similarity_score = 0.5 (fallback)
+        List[Dict]: Lista de restaurantes com similarity_score baseado no rating (0.0 a 1.0)
     """
     restaurants = get_restaurants(
         db=db,
@@ -227,9 +254,15 @@ def get_popular_restaurants(
     
     recommendations = []
     for restaurant in unique_restaurants[:limit]:
+        # Calcular relevância baseada no rating normalizado (0.0 a 1.0)
+        # Rating mínimo (3.5) = 0.7, Rating máximo (5.0) = 1.0
+        rating = float(restaurant.rating or min_rating)
+        # Normalizar para 0.0-1.0, mas garantir mínimo de 0.5 para restaurantes com rating >= min_rating
+        similarity_score = max(0.5, min(1.0, rating / 5.0))
+        
         recommendations.append({
             "restaurant": restaurant,
-            "similarity_score": 0.5  # Score neutro para fallback
+            "similarity_score": similarity_score
         })
     
     return recommendations
@@ -282,6 +315,10 @@ def generate_recommendations(
     
     # 3. Cold start: se usuário não tem pedidos E não tem vetor sintético, retornar populares
     if not orders and user_embedding is None:
+        logger.info(
+            f"Cold start para usuário {user_id}: retornando restaurantes populares",
+            extra={"user_id": user_id, "limit": limit}
+        )
         return get_popular_restaurants(db, limit=limit, min_rating=min_rating)
     
     # 4. Se não há embedding cached (nem sintético nem calculado), calcular novo baseado em pedidos
@@ -292,8 +329,13 @@ def generate_recommendations(
         if not orders:
             return get_popular_restaurants(db, limit=limit, min_rating=min_rating)
         
-        # Obter todos os restaurantes
-        restaurants = get_restaurants(db, skip=0, limit=10000)
+        # OTIMIZAÇÃO: Buscar apenas restaurantes que o usuário pediu (não todos)
+        # Reduz drasticamente o uso de memória
+        restaurant_ids = [order.restaurant_id for order in orders]
+        restaurants = get_restaurants_for_similarity(
+            db, 
+            restaurant_ids=restaurant_ids
+        )
         
         # Calcular embedding do usuário baseado em pedidos
         user_embedding = calculate_user_preference_embedding(
@@ -305,11 +347,18 @@ def generate_recommendations(
         
         # Se ainda não conseguiu calcular (sem restaurantes com embeddings), fallback
         if user_embedding is None:
+            logger.warning(
+                f"Não foi possível calcular embedding para usuário {user_id}: sem restaurantes com embeddings",
+                extra={"user_id": user_id, "orders_count": len(orders)}
+            )
             return get_popular_restaurants(db, limit=limit, min_rating=min_rating)
         
         # Cachear embedding nas preferências do usuário
         try:
-            favorite_cuisines = extract_user_patterns(user_id, orders, restaurants)["favorite_cuisines"]
+            # Para extract_user_patterns, usar metadados (mais leve)
+            from app.core.cache import get_cached_restaurants_metadata
+            restaurants_metadata = get_cached_restaurants_metadata(db, ttl_minutes=60)
+            favorite_cuisines = extract_user_patterns(user_id, orders, restaurants_metadata)["favorite_cuisines"]
             create_or_update_user_preferences(
                 db=db,
                 user_id=user_id,
@@ -320,8 +369,13 @@ def generate_recommendations(
             # Se erro ao salvar cache, continuar (não crítico)
             pass
     
-    # 5. Obter todos os restaurantes para calcular similaridade
-    all_restaurants = get_restaurants(db, skip=0, limit=10000, min_rating=min_rating)
+    # 5. Obter restaurantes para calcular similaridade (apenas campos necessários)
+    # OTIMIZAÇÃO: Busca apenas id, embedding e rating (não todos os campos)
+    all_restaurants = get_restaurants_for_similarity(
+        db, 
+        limit=None,  # Sem limite (mas apenas campos essenciais)
+        min_rating=min_rating
+    )
     
     # 6. IDs de restaurantes pedidos recentemente (para excluir se solicitado)
     recent_restaurant_ids = set()
@@ -356,6 +410,9 @@ def generate_recommendations(
             # Calcular similaridade
             similarity = calculate_similarity(user_embedding, restaurant_embedding)
             
+            # Garantir que similarity está entre 0.0 e 1.0 (pode haver imprecisão de ponto flutuante)
+            similarity = max(0.0, min(1.0, float(similarity)))
+            
             recommendations.append({
                 "restaurant": restaurant,
                 "similarity_score": similarity
@@ -365,10 +422,22 @@ def generate_recommendations(
             seen_restaurant_ids.add(restaurant.id)
         except Exception as e:
             # Se erro ao processar restaurante, pular
+            logger.warning(
+                f"Erro ao calcular similaridade para restaurante {restaurant.id}: {e}",
+                extra={"restaurant_id": restaurant.id}
+            )
             continue
     
     # 8. Ordenar por similaridade (maior primeiro)
     recommendations.sort(key=lambda x: x["similarity_score"], reverse=True)
+    
+    # Log para debug: verificar se similarity_score está variando
+    if recommendations:
+        scores = [rec["similarity_score"] for rec in recommendations[:5]]
+        logger.debug(
+            f"Top 5 similarity scores para usuário {user_id}",
+            extra={"user_id": user_id, "scores": scores, "total_recommendations": len(recommendations)}
+        )
     
     # 9. Retornar top N (garantir que não há duplicatas mesmo após ordenação)
     unique_recommendations = []
@@ -412,7 +481,9 @@ def select_chef_recommendation(
         return None
     
     # Extrair padrões do usuário
-    restaurants = get_restaurants(db, skip=0, limit=10000)
+    # OTIMIZAÇÃO MEMÓRIA: Usar get_restaurants_metadata() que carrega apenas metadados (id, name, cuisine_type, rating, price_range)
+    # Reduz uso de memória em ~60-80% comparado a get_restaurants(limit=10000) que carrega descrições completas
+    restaurants = get_restaurants_metadata(db, limit=500)  # Reduzido de 10000 para 500
     user_patterns = extract_user_patterns(user_id, orders, restaurants)
     favorite_cuisines = set(user_patterns.get("favorite_cuisines", []))
     

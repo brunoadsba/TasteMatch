@@ -50,15 +50,26 @@ def register(
         HTTPException: Se o email já existir ou dados inválidos
     """
     # Verificar se email já existe
-    existing_user = get_user_by_email(db, email=user_data.email)
-    if existing_user:
-        logger.warning(
-            "Tentativa de registro com email já cadastrado",
+    try:
+        existing_user = get_user_by_email(db, email=user_data.email)
+        if existing_user:
+            logger.warning(
+                "Tentativa de registro com email já cadastrado",
+                extra={"email": user_data.email}
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email já cadastrado. Use outro email ou faça login."
+            )
+    except Exception as e:
+        # Se houver erro ao verificar (ex: banco indisponível), logar e relançar
+        logger.error(
+            f"Erro ao verificar email existente: {type(e).__name__}: {str(e)}",
             extra={"email": user_data.email}
         )
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email já cadastrado"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro ao processar registro. Tente novamente."
         )
     
     # Hash da senha
@@ -101,7 +112,7 @@ def login(
         TokenResponse: Usuário autenticado e token JWT
         
     Raises:
-        HTTPException: Se as credenciais forem inválidas
+        HTTPException: Se as credenciais forem inválidas ou banco indisponível
     """
     # Buscar usuário por email
     user = get_user_by_email(db, email=login_data.email)

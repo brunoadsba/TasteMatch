@@ -11,6 +11,7 @@ primary_region = 'gru'
 
 [deploy]
   strategy = 'rolling'
+  release_command = "alembic upgrade head"
 
 [env]
   PORT = '8000'
@@ -31,8 +32,13 @@ primary_region = 'gru'
 
   [services.concurrency]
     type = 'requests'
-    hard_limit = 1000
-    soft_limit = 500
+    # OTIMIZAÇÃO: Limites conservadores para ambiente com 1GB de memória
+    # soft_limit: A partir de 10 requisições simultâneas, começa a distribuir para 2ª máquina
+    soft_limit = 10
+    # hard_limit: Teto absoluto. Se chegar a 15, o Fly segura a requisição na borda
+    # e NÃO deixa entrar no container até liberar vaga (proteção OOM)
+    # Cálculo: 15 conexões * 50MB = 750MB (dentro de 1GB)
+    hard_limit = 15
 
   [[services.http_checks]]
     interval = '10s'
@@ -47,3 +53,8 @@ primary_region = 'gru'
   memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
+
+# Habilitar swap (memória virtual em disco)
+# OTIMIZAÇÃO: Se a RAM estourar um pouco, o Linux usa o disco em vez de matar o processo
+# Para o usuário, lentidão é melhor que erro 500 (OOM)
+swap_size_mb = 512

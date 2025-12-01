@@ -77,3 +77,84 @@ tmp/
 
 # Local Netlify folder
 .netlify
+
+# Playwright
+playwright-report/
+test-results/
+playwright/.cache/
+tests/screenshots/*.png
+
+# Arquivos temporários da migração Supabase
+backend/supabase_*.sql
+backend/*_inserts*.sql
+backend/supabase_chunk_*.sql
+backend/supabase_inserts*.sql
+
+# Backups
+backup_docs_*/
+*.dump
+*.csv
+deploy.log
+
+# Lighthouse cache
+lighthouse.*/
+
+# Arquivos estranhos
+backend/=*
+
+# Scripts temporários de migração
+backend/scripts/execute_*.py
+backend/scripts/execute_*.sh
+backend/scripts/split_*.py
+backend/scripts/create_final_chunks.py
+backend/scripts/monitor_migration.py
+backend/scripts/check_migration.sh
+backend/scripts/setup_postgres.*
+backend/scripts/generate_inserts_for_supabase.py
+backend/scripts/run_migration_auto.py
+
+# Guias de deploy específicos (Fly.io) - não essenciais para setup local
+backend/scripts/EXECUTAR_*.md
+backend/requirements-docker.txt
+
+# Documentação temporária de debug/análise
+Docs/ANALISE_*.md
+Docs/DEBUG_*.md
+Docs/CORRECAO_*.md
+Docs/RESULTADO_*.md
+Docs/DIAGNOSTICO_*.md
+Docs/SOLUCAO_*.md
+Docs/PLANO_*.md
+Docs/INSTRUCOES_*.md
+Docs/CHECKLIST_*.md
+Docs/RESUMO_*.md
+Docs/VALIDACAO_*.md
+Docs/MELHORIAS_*.md
+Docs/PROBLEMA_*.md
+Docs/ERRO*.md
+Docs/OTIMIZACAO_*.md
+Docs/INICIALIZACAO_*.md
+Docs/RAG_*.md
+Docs/SUCESSO_*.md
+Docs/AVALIACAO_*.md
+Docs/NOTA_*.md
+Docs/correcao-*.md
+Docs/erro500*.md
+Docs/problemas-*.md
+Docs/sugestao-*.md
+Docs/conhecimento-*.md
+
+# Scripts de teste temporários
+backend/scripts/test_*.py
+backend/scripts/debug_*.py
+backend/scripts/check_*.py
+backend/scripts/reindex_*.py
+backend/test_*.py
+
+# Paths do Windows
+C:/
+Users/
+
+# Arquivos de apresentação temporários (se não forem necessários)
+APRESENTACAO_1MIN.md
+ROTEIRO_VIDEO_1MIN.md

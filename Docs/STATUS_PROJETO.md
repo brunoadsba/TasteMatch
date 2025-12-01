@@ -1,22 +1,24 @@
 # TasteMatch - Status do Projeto
 
-> **Última atualização:** 26/11/2025  
-> **Status Geral:** ✅ MVP Funcional + Melhorias P0/P1 + Onboarding Gamificado
+> **Última atualização:** 30/11/2025  
+> **Status Geral:** ✅ MVP Funcional + Migração Supabase Concluída + Rodando Localmente
 
 ---
 
 ## 📊 Resumo Executivo
 
-O projeto TasteMatch está **funcional end-to-end** com backend completo, sistema de recomendações com IA, integração GenAI (Groq), e frontend React funcionando. O sistema está rodando localmente e pronto para testes.
+O projeto TasteMatch está **funcional end-to-end** com backend completo, sistema de recomendações com IA, integração GenAI (Groq), e frontend React funcionando. O sistema está **deployado em produção** (Backend no Fly.io, Frontend no Netlify) e funcionando corretamente após correção de CORS.
 
 ### Progresso Geral: ~100% do MVP
 
-- ✅ **Backend:** 100% completo
-- ✅ **IA/ML:** 100% completo
+- ✅ **Backend:** 100% completo (incluindo onboarding)
+- ✅ **IA/ML:** 100% completo (incluindo vetor sintético)
 - ✅ **GenAI:** 100% completo
-- ✅ **Frontend:** 100% completo (com melhorias de UX)
+- ✅ **Frontend:** 100% completo (incluindo onboarding e correção de CORS)
 - ✅ **Testes:** 100% completo (53 testes automatizados)
-- ✅ **Deploy:** 100% completo (Backend no Fly.io, Frontend no Netlify)
+- ✅ **Deploy:** 100% completo (Backend v42 no Fly.io, Frontend no Netlify)
+- ✅ **Banco de Dados:** 100% migrado para Supabase PostgreSQL com pgvector
+- ✅ **CORS:** 100% corrigido (URL da API detecta ambiente automaticamente)
 
 ---
 
@@ -138,13 +140,21 @@ O projeto TasteMatch está **funcional end-to-end** com backend completo, sistem
 - ⏳ Otimização de queries adicionais (pendente - não crítico)
 - ⏳ Documentação adicional (pendente)
 
-### **FASE 12: Deploy e Produção** ❌ (0%)
-- ❌ Preparação para deploy (pendente)
-- ❌ Configuração Fly.io para backend (pendente)
-- ❌ Configuração Netlify/Vercel para frontend (pendente)
-- ❌ Variáveis de ambiente de produção (pendente)
-- ❌ PostgreSQL com pgvector em produção (pendente)
-- ❌ Validação em produção (pendente)
+### **FASE 12: Deploy e Produção** ✅ (100%)
+- ✅ Backend deployado no Fly.io (v42)
+- ✅ Frontend deployado no Netlify
+- ✅ Banco de dados migrado para Supabase PostgreSQL
+- ✅ Extensão pgvector habilitada
+- ✅ Embeddings regenerados (24/24 restaurantes)
+- ✅ Base RAG migrada (64 documentos)
+- ✅ Configurações otimizadas para Supabase
+- ✅ Todos os endpoints funcionando em produção
+- ✅ Preparação para deploy (concluído)
+- ✅ Configuração Fly.io para backend (concluído - v42)
+- ✅ Configuração Netlify para frontend (concluído)
+- ✅ Variáveis de ambiente de produção (configuradas)
+- ✅ PostgreSQL com pgvector em produção (Supabase)
+- ✅ Validação em produção (concluída)
 
 ---
 
@@ -366,6 +376,288 @@ npm run dev
 
 ---
 
-**Última atualização:** 27/01/2025  
-**Status:** ✅ MVP Praticamente Completo (95%) - Pronto para deploy
+---
+
+## 🚀 Sprint 3: Onboarding Gamificado (26/11/2025)
+
+### Funcionalidades Implementadas
+
+1. ✅ **Onboarding Gamificado**
+   - Página de onboarding com 3 etapas (culinárias, preço, restrições)
+   - Geração de vetor sintético baseado em escolhas do usuário
+   - Recomendações personalizadas desde o primeiro acesso
+
+2. ✅ **Backend**
+   - Endpoint `/api/onboarding/complete` implementado
+   - Serviço `onboarding_service.py` com geração de vetor sintético
+   - Integração com `recommender.py` para usar vetor sintético
+
+3. ✅ **Frontend**
+   - Página de onboarding completa e responsiva
+   - Redirecionamento automático após cadastro
+   - Atualização dinâmica de recomendações após onboarding
+
+4. ✅ **Deploy**
+   - Backend deployado (v28) com endpoint de onboarding
+   - Frontend deployado com página de onboarding
+   - CORS corrigido (URL da API detecta ambiente automaticamente)
+
+---
+
+## 🔧 Sprint 4: Correção de CORS (26/11/2025)
+
+### Problema Identificado
+- ❌ Erros de CORS no console do navegador
+- ❌ Frontend em produção usando `localhost:8000` como URL da API
+
+### Solução Aplicada
+- ✅ URL da API agora detecta ambiente automaticamente
+- ✅ Em produção: usa `https://tastematch-api.fly.dev`
+- ✅ Em desenvolvimento: usa `http://localhost:8000`
+
+### Status
+- ✅ Código corrigido
+- ✅ Build concluído
+- ✅ Deploy realizado
+- ✅ CORS funcionando em produção
+
+---
+
+---
+
+## 🚀 Sprint 5: Mobile-First Refactor + Testes E2E (26/11/2025)
+
+### Funcionalidades Implementadas
+
+1. ✅ **Mobile-First Refactor Completo**
+   - Componentes `AppHeader` e `MobileMenu` reutilizáveis
+   - Menu hambúrguer para mobile (< 768px)
+   - Cards forçados em Orders page (mobile)
+   - Viewports dinâmicos (dvh) para teclado virtual
+   - Modais e componentes totalmente responsivos
+   - Composition Pattern implementado
+
+2. ✅ **Testes E2E Automatizados (Playwright)**
+   - 50 testes automatizados cobrindo mobile-first
+   - Configuração para múltiplos viewports
+   - Zero falhas (15 passaram, 35 pulados quando não há login)
+   - Scripts npm para execução fácil
+   - Screenshots comparativos em diferentes viewports
+
+### Arquivos Modificados/Criados
+- **Mobile-First:** 9 arquivos (componentes, páginas, configurações)
+- **Testes E2E:** 4 arquivos (config, testes, scripts, docs)
+
+### Status
+- ✅ Mobile-First implementado e testado
+- ✅ Testes E2E funcionando (0 falhas)
+- ✅ Melhorias de UX (Fase 5.3) implementadas
+  - Overscroll behavior para prevenir scroll da página de fundo
+  - Botões posicionados na parte inferior do drawer (melhor alcance)
+- ✅ Build sem erros
+- ✅ Documentação atualizada
+
+---
+
+---
+
+## 🗄️ Sprint 6: Migração para Supabase (29/11/2025)
+
+### Objetivo
+Migrar banco de dados PostgreSQL do Fly.io Postgres para Supabase, mantendo apenas a API FastAPI no Fly.io e movendo todos os dados pesados para Supabase.
+
+### Funcionalidades Implementadas
+
+1. ✅ **Migração Completa de Dados**
+   - Schema restaurado no Supabase (10 tabelas)
+   - 15 usuários migrados
+   - 24 restaurantes migrados
+   - 102 pedidos migrados
+   - 5.156 recomendações migradas
+
+2. ✅ **Embeddings Regenerados**
+   - 24/24 restaurantes com embeddings
+   - Script de geração executado com sucesso
+   - Sistema de recomendações funcional
+
+3. ✅ **Base RAG Migrada**
+   - Coleção `tastematch_knowledge` criada
+   - 64 documentos migrados
+   - Chef Virtual funcionando
+
+4. ✅ **Configurações Otimizadas**
+   - Connection pooling configurado (porta 6543)
+   - Pool otimizado para Supabase (pool_size=20, max_overflow=0)
+   - SSL obrigatório configurado
+   - Variável `DB_PROVIDER=supabase` configurada
+
+5. ✅ **Resolução de Conflitos de Dependências**
+   - 7 conflitos de dependências Python resolvidos
+   - Build Docker validado localmente
+   - Deploy v42 bem-sucedido
+
+6. ✅ **Correção do Alembic**
+   - Erro de interpolação do ConfigParser corrigido
+   - URLs com percent-encoding tratadas corretamente
+   - Migrations funcionando
+
+### Arquivos Modificados/Criados
+- **Migração**: `Docs/supabase.md` (plano completo)
+- **Status**: `Docs/status-migracao-supabase.md` (status detalhado)
+- **Erros**: `Docs/erros-deploy-migracao.md` (documentação de erros)
+- **Código**: `backend/app/database/base.py` (pool otimizado)
+- **Código**: `backend/alembic/env.py` (correção ConfigParser)
+- **Scripts**: `backend/scripts/migrate_rag_to_supabase.py`
+- **Scripts**: `backend/scripts/validate_supabase_migration.py`
+
+### Status
+- ✅ Migração 100% concluída
+- ✅ API v42 em produção funcionando
+- ✅ Todos os endpoints validados
+- ✅ Documentação completa atualizada
+
+### Lições Aprendidas
+- Resolver conflitos de dependências incrementalmente
+- Testar build local antes de deploy
+- Configuração explícita é melhor que detecção automática
+- Embeddings precisam ser regenerados após migração
+- ConfigParser e percent-encoding requerem tratamento especial
+
+**Documentação Completa:**
+- [status-migracao-supabase.md](./status-migracao-supabase.md)
+- [supabase.md](./supabase.md)
+- [erros-deploy-migracao.md](./erros-deploy-migracao.md)
+- [licoes-aprendidas.md](./licoes-aprendidas.md)
+
+---
+
+## 🎯 SPRINT 8: Melhorias de Inteligência e Formatação do Chef Virtual (29/11/2025)
+
+Melhorias críticas no Chef Virtual para tornar o agente mais inteligente, preciso e com respostas bem formatadas.
+
+### Problemas Resolvidos
+
+1. **Filtro Semântico Muito Permissivo**
+   - **Problema:** Recomendava restaurantes irrelevantes (ex: "Casa do Pão de Queijo" para "hamburguer gourmet")
+   - **Solução:** Filtro rigoroso que remove palavras genéricas, usa apenas tags principais do mapeamento, e valida correspondência em keywords, nome e descrição
+
+2. **Agente Continuava Conversas Antigas**
+   - **Problema:** Histórico muito extenso fazia agente responder perguntas antigas
+   - **Solução:** Histórico limitado (4 mensagens padrão, 2 para comida, 0 para cumprimentos), filtro de relevância, e instruções explícitas no prompt
+
+3. **Recomendações para Cumprimentos**
+   - **Problema:** "oi" e "tudo bem?" geravam recomendações de restaurantes
+   - **Solução:** Detecção de interações sociais antes de buscar RAG, respostas simples e diretas
+
+4. **Formatação com Artefatos e Texto Verboso**
+   - **Problema:** Respostas continham texto introdutório verboso, descrições duplicadas, emojis soltos e metadados técnicos
+   - **Solução:** Limpeza agressiva de artefatos, remoção destrutiva de descrições, pós-processamento sempre aplicado com lógica invertida
+
+### Arquivos Modificados
+
+- `backend/app/core/chef_chat.py` - Filtro semântico rigoroso, detecção de interações sociais, histórico inteligente
+- `backend/app/core/format_response.py` - Limpeza de artefatos, remoção destrutiva, formatação visual melhorada
+
+### Resultados
+
+- ✅ Filtro semântico previne recomendações incorretas
+- ✅ Interações sociais respondidas adequadamente
+- ✅ Histórico foca apenas na pergunta atual
+- ✅ Formatação limpa e profissional
+- ✅ Respostas fluidas e inteligentes
+
+---
+
+## 🎤 SPRINT 7: Correções de Áudio e Chat (29/11/2025)
+
+### Objetivo
+Corrigir erros 500 no endpoint `/api/chat/` e problemas com processamento de áudio.
+
+### Problemas Resolvidos
+
+#### 1. Erro 500 - reasoning_format
+- **Erro:** `TypeError: Completions.create() got an unexpected keyword argument 'reasoning_format'`
+- **Causa:** `langchain-groq==0.3.3` passa parâmetros não suportados para modelos básicos
+- **Solução:** Wrapper `ChatGroqFiltered` com monkey patch no cliente Groq
+- **Status:** ✅ Resolvido
+
+#### 2. Erro 500 - API de áudio não disponível
+- **Erro:** `'Groq' object has no attribute 'audio'`
+- **Causa:** Versão `groq==0.4.1` muito antiga, sem suporte para API de áudio
+- **Solução:** Atualizado para `groq==0.36.0`
+- **Status:** ✅ Resolvido
+
+#### 3. Caminho incorreto do endpoint de áudio
+- **Erro:** Arquivos de áudio não eram servidos
+- **Causa:** URL gerada como `/api/audio/` mas endpoint é `/api/chat/audio/`
+- **Solução:** Corrigido caminho para incluir prefixo do router
+- **Status:** ✅ Resolvido
+
+#### 4. Conflito asyncio.run() em contexto async
+- **Erro:** Conflito ao usar `text_to_speech()` síncrono em endpoint async
+- **Causa:** `asyncio.run()` não pode ser usado dentro de loop já em execução
+- **Solução:** Usar `text_to_speech_async()` diretamente
+- **Status:** ✅ Resolvido
+
+### Arquivos Modificados
+- `backend/app/core/chef_chat.py` - Wrapper ChatGroqFiltered com monkey patch
+- `backend/app/api/routes/chat.py` - Correções de áudio e logging
+- `backend/app/core/audio_service.py` - Código já estava correto
+- `backend/requirements.txt` - Atualizado `groq==0.36.0`
+- `backend/app/main.py` - Handler global de exceções (já existia)
+
+### Melhorias Implementadas
+- ✅ Logging detalhado em pontos críticos
+- ✅ Tratamento de erros robusto
+- ✅ Monkey patch no cliente Groq (interceptação no último momento)
+- ✅ Versão atualizada do SDK Groq
+
+### Status
+- ✅ Erro 500 no chat resolvido
+- ✅ Processamento de áudio funcionando
+- ✅ Geração de áudio da resposta funcionando
+- ✅ Endpoint de áudio servindo arquivos corretamente
+
+### Documentação Criada
+- `Docs/erro500.md` - Documento completo do erro
+- `Docs/ANALISE_SOLUCOES_ERRO_500.md` - Análise comparativa de soluções
+- `Docs/IMPLEMENTACAO_OPCAO_C.md` - Implementação da solução
+- `Docs/CORRECAO_PATCH_CLIENTE_GROQ.md` - Correção do patch
+- `Docs/CORRECAO_AUDIO.md` - Correções de áudio
+- `Docs/SOLUCAO_ERRO_AUDIO_GROQ.md` - Solução do erro de áudio
+- `Docs/DEBUG_ERRO_AUDIO_500.md` - Guia de debug
+
+---
+
+## 🎯 SPRINT 9: Correções de Sopa e Remoção de "Próximos Passos" (30/11/2025)
+
+### Objetivo
+Corrigir tratamento de queries específicas (sopa) e melhorar UX removendo seção desnecessária das respostas.
+
+### Problemas Resolvidos
+
+1. **Query "sopa" Retornava Recomendações Irrelevantes**
+   - **Problema:** Quando usuário pedia "sopa", sistema não encontrava restaurantes relevantes mas ainda gerava recomendações não relacionadas (ex: Papa John's)
+   - **Solução:** Adicionado "sopa" e "sopas" à lista de `specific_dish_keywords` para tratamento adequado de queries específicas sem match
+   - **Status:** ✅ Resolvido
+
+2. **Seção "Próximos Passos" Aparecia Desnecessariamente**
+   - **Problema:** Seção "📱 Próximos Passos: Digite 'cardápio [nome]'..." aparecia em todas as respostas, mesmo quando não era relevante
+   - **Solução:** Removida completamente a seção "Próximos Passos" das respostas do Chef Virtual
+   - **Status:** ✅ Resolvido
+
+### Arquivos Modificados
+
+- `backend/app/core/chef_chat.py` - Adicionado "sopa" e "sopas" à lista de queries específicas, removida seção "Próximos Passos"
+
+### Resultados
+
+- ✅ Queries específicas sem match retornam mensagem clara ao invés de recomendações irrelevantes
+- ✅ Respostas mais limpas sem seção "Próximos Passos"
+- ✅ Melhor experiência do usuário com mensagens diretas e úteis
+
+---
+
+**Última atualização:** 30/11/2025  
+**Status:** ✅ MVP Completo + Onboarding + Deploy + Mobile-First + Testes E2E + Migração Supabase + Correções de Áudio e Chat + Melhorias de Inteligência e Formatação do Chef Virtual + **Correções de Sopa e Remoção de "Próximos Passos"**
 

@@ -1,7 +1,7 @@
 # TasteMatch - Guia de Deploy em Produção
 
-> **Última atualização:** 2025-01-27  
-> **Status:** Fase 12 - Deploy e Produção
+> **Última atualização:** 29/11/2025  
+> **Status:** ✅ Deploy Completo - Migração Supabase Concluída (v42)
 
 ---
 
@@ -94,9 +94,41 @@ CREATE EXTENSION IF NOT EXISTS vector;
 \q
 ```
 
-**Opção B: Serviço Externo (Neon, Supabase, etc.)**
+**Opção B: Supabase (✅ EM USO EM PRODUÇÃO)**
 
-Copiar `DATABASE_URL` do serviço e configurar como secret (ver passo 2.5).
+**Status Atual:** Migração concluída em 29/11/2025
+
+1. ✅ Projeto criado no Supabase (https://supabase.com)
+2. ✅ Extensão pgvector habilitada no SQL Editor:
+   ```sql
+   CREATE EXTENSION IF NOT EXISTS vector;
+   ```
+3. ✅ Connection string configurada (Settings → Database)
+   - **Connection Pooling (em uso)**: `postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres`
+   - **Direto**: `postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres`
+4. ✅ Secrets configurados:
+   ```bash
+   fly secrets set DATABASE_URL=<supabase-connection-string> -a tastematch-api
+   fly secrets set DB_PROVIDER=supabase -a tastematch-api
+   ```
+
+**Vantagens do Supabase:**
+- ✅ Connection pooling automático (PgBouncer)
+- ✅ Backups automáticos
+- ✅ Interface web para gerenciamento
+- ✅ Escalabilidade gerenciada
+- ✅ SSL obrigatório (mais seguro)
+- ✅ Performance otimizada (pool_size=20, max_overflow=0)
+
+**Nota**: Para percent-encode da senha na connection string, substituir caracteres especiais:
+- `#` → `%23`
+- `@` → `%40`
+
+**⚠️ Importante:** O Alembic precisa tratar URLs com percent-encoding corretamente. Ver `backend/alembic/env.py` para implementação.
+
+**Documentação Completa:**
+- [supabase.md](./supabase.md) - Plano completo de migração
+- [status-migracao-supabase.md](./status-migracao-supabase.md) - Status detalhado
 
 ### 2.5 Configurar Secrets
 
@@ -308,9 +340,55 @@ Após o deploy completo:
 
 ---
 
+## 🤖 Deploy Automatizado (Recomendado)
+
+### Script de Deploy
+
+O projeto inclui um script Python automatizado que valida pré-requisitos, executa deploys e valida resultados:
+
+```bash
+# Deploy completo (backend + frontend)
+python3 scripts/deploy.py
+
+# Apenas backend
+python3 scripts/deploy.py --backend-only
+
+# Apenas frontend
+python3 scripts/deploy.py --frontend-only
+
+# Simular sem executar (dry run)
+python3 scripts/deploy.py --dry-run
+```
+
+**Funcionalidades do Script:**
+- ✅ Validação de pré-requisitos (Fly CLI, Git, Python)
+- ✅ Verificação e validação de secrets (valores e formato)
+- ✅ Health check robusto com retry e backoff exponencial
+- ✅ Validação de endpoints críticos após deploy
+- ✅ Execução automática de migrations (via release command)
+- ✅ Build local do frontend antes de deploy
+- ✅ Lock para evitar deploys simultâneos
+- ✅ Logs persistentes e relatório em JSON
+
+**Configuração:**
+- Arquivo de configuração: `scripts/deploy.config.json`
+- Personalize URLs, timeouts e endpoints críticos
+
+**Documentação Completa:**
+- Ver `Docs/ANALISE_ERROS_DEPLOY.md` para análise detalhada dos erros e soluções
+
+---
+
 ## 🔄 Atualizações Futuras
 
 ### Fazer Deploy de Atualizações
+
+**Opção 1: Script Automatizado (Recomendado)**
+```bash
+python3 scripts/deploy.py
+```
+
+**Opção 2: Manual**
 
 **Backend:**
 ```bash
@@ -327,6 +405,15 @@ netlify deploy --prod
 
 ### Executar Novas Migrations
 
+**Migrations são executadas automaticamente** via release command configurado no `fly.toml`:
+```toml
+[deploy]
+  release_command = "alembic upgrade head"
+```
+
+**Nota:** O release command executa migrations em todas as máquinas após cada deploy, evitando race conditions em rolling deployments.
+
+**Execução Manual (se necessário):**
 ```bash
 fly ssh console -a tastematch-api
 cd /app
@@ -347,6 +434,24 @@ exit
    - Monitorar logs regularmente
    - Ajustar workers do uvicorn se necessário
    - Configurar CDN para frontend (Netlify já faz isso)
+
+3. **Memória e Otimização:**
+   - **Memória configurada:** 1GB (fly.toml)
+   - **Workers:** 1 (otimizado para reduzir uso de memória)
+   - **Swap:** 512MB habilitado
+   - **Otimizações aplicadas:**
+     - Singleton pattern para modelo de embeddings (reduz ~200-300MB)
+     - Uso de `get_restaurants_metadata()` ao invés de `get_restaurants()` (reduz ~60-80% de memória)
+     - Limites reduzidos em consultas grandes (500 ao invés de 1000-10000)
+   - **Documentação completa:** Ver [OTIMIZACAO_MEMORIA.md](./OTIMIZACAO_MEMORIA.md)
+   - **Se ocorrer OOM (Out of Memory):**
+     ```bash
+     # Verificar logs
+     fly logs -a tastematch-api | grep -i "out of memory"
+     
+     # Aumentar memória (se necessário)
+     fly scale memory 2048 -a tastematch-api  # 2GB (~$5/mês adicional)
+     ```
 
 3. **Backup:**
    - Configurar backups automáticos do PostgreSQL
