@@ -1,68 +1,81 @@
-# Base de Conhecimento TasteMatch - Chef Virtual
+# BASE DE CONHECIMENTO TASTEMATCH - MANUAL DO CHEF
 
-## Sobre o TasteMatch
-O TasteMatch é uma plataforma de recomendação de restaurantes que utiliza inteligência artificial para personalizar sugestões baseadas nas preferências gastronômicas dos usuários.
+## 1. FILOSOFIA DE RECOMENDAÇÃO
+- O TasteMatch prioriza experiências, não apenas comida.
+- Se o usuário pedir algo que não temos no banco (ex: Churrasco), explique o que torna aquele prato especial e sugira a alternativa mais próxima (ex: "Não temos uma churrascaria clássica hoje, mas o [Restaurante X] serve ótimas carnes grelhadas").
+- Sempre seja consultivo e útil, mesmo quando não há a opção exata disponível.
 
-## Tipos de Culinária
+## 2. GUIAS DE CULINÁRIA (DOMÍNIO GERAL)
 
-### Culinária Brasileira
-- Pratos típicos: Feijoada, Pão de Açúcar, Moqueca, Churrasco
-- Características: Rica em sabores, ingredientes regionais, tradição familiar
-- Melhores restaurantes brasileiros oferecem pratos autênticos e bem temperados
+### CHURRASCO E CARNES
+- **Conceito:** Método de cozimento em fogo forte/brasa. No Brasil, associado a cortes como Picanha, Maminha, Costela e Fraldinha.
+- **Variações:** Rodízio (serviço contínuo), A la carte (cortes nobres), Parrilla (estilo argentino/uruguaio).
+- **Harmonização:** Cervejas Pilsen/IPA, Caipirinhas, Vinhos Malbec ou Tannat.
+- **Se não houver Churrascaria:** Sugerir restaurantes de culinária Brasileira (pratos feitos com carne), Hamburguerias (carne grelhada) ou Steakhouses.
+- **Características de um bom churrasco:** Carne bem temperada, grelhada na brasa, suculenta e com ponto correto. Picanha é o corte mais popular.
 
-### Culinária Italiana
-- Pratos populares: Pizza, Massas (Carbonara, Bolognese), Risotto, Lasanha
-- Características: Ingredientes frescos, molhos tradicionais, queijos de qualidade
-- Dica: Massas al dente são o padrão de qualidade
+### JAPONESA (SUSHI/SASHIMI)
+- **Conceito:** Foco em peixe fresco, arroz avinagrado (shari) e umami.
+- **Pratos Chave:** Sushi, Sashimi, Temaki, Yakisoba (quente), Tempurá, Lámen, Ramen.
+- **Se não houver Japonês:** Sugerir Poke (havaiano) ou restaurantes de frutos do mar.
+- **Dica:** Sushi de qualidade usa peixe fresco e arroz temperado corretamente. A apresentação é importante.
 
-### Culinária Japonesa
-- Pratos principais: Sushi, Sashimi, Temaki, Yakisoba, Ramen
-- Características: Frescor dos ingredientes, apresentação cuidadosa, sabores equilibrados
-- Dica: Sushi de qualidade usa peixe fresco e arroz temperado corretamente
+### ITALIANA E MASSAS
+- **Conceito:** Comfort food, baseada em trigo, molhos de tomate, queijos e azeite.
+- **Pratos Chave:** Pizza, Risoto, Carbonara, Lasanha, Massas variadas.
+- **Se não houver Italiano:** Sugerir restaurantes com opções de massas genéricas ou culinária mediterrânea.
+- **Dica:** Massas al dente são o padrão de qualidade. Molhos tradicionais fazem a diferença.
 
-### Culinária Mexicana
-- Pratos típicos: Tacos, Burritos, Quesadillas, Guacamole, Nachos
-- Características: Temperos picantes, ingredientes frescos, sabores intensos
-- Dica: A qualidade do guacamole é um bom indicador do restaurante
+### LANCHES E BURGERS
+- **Conceito:** Comida rápida, saborosa e prática.
+- **Características:** Hambúrgueres, Batatas fritas, Sanduíches variados.
+- **Se não houver Hamburgueria:** Sugerir pratos rápidos em restaurantes brasileiros ou padarias gourmet.
+- **Dica:** Avalie a qualidade dos ingredientes e o tempo de preparo. Hambúrgueres artesanais são superiores.
 
-### Culinária Árabe
-- Pratos populares: Kebab, Shawarma, Hummus, Falafel, Tabule
-- Características: Especiarias marcantes, carnes bem temperadas, vegetais frescos
-- Dica: Pão pita fresco é essencial para uma boa experiência
+### ÁRABE
+- **Conceito:** Especiarias marcantes, carnes bem temperadas, vegetais frescos.
+- **Pratos populares:** Kebab, Shawarma, Hummus, Falafel, Tabule, Esfiha, Quibe.
+- **Dica:** Pão pita fresco é essencial para uma boa experiência.
 
-### Fast Food
-- Opções: Hambúrgueres, Batatas fritas, Frango frito, Sanduíches
-- Características: Praticidade, sabor consistente, preço acessível
-- Dica: Avalie a qualidade dos ingredientes e o tempo de preparo
+### MEXICANA
+- **Conceito:** Temperos picantes, ingredientes frescos, sabores intensos.
+- **Pratos típicos:** Tacos, Burritos, Quesadillas, Guacamole, Nachos.
+- **Dica:** A qualidade do guacamole é um bom indicador do restaurante.
 
-### Vegetariana/Vegana
-- Opções: Saladas criativas, Hambúrgueres vegetais, Pratos à base de plantas
-- Características: Ingredientes frescos, criatividade, opções nutritivas
-- Dica: Restaurantes especializados geralmente oferecem melhor qualidade
+### VEGETARIANA/VEGANA
+- **Foco:** Grãos, legumes, cogumelos e proteínas vegetais.
+- **Opções:** Saladas criativas, Hambúrgueres vegetais, Pratos à base de plantas.
+- **Dica:** Muitos restaurantes onívoros possuem pratos "secretos" ou adaptáveis. Sempre verifique as saladas e acompanhamentos.
+- **Restaurantes especializados:** Geralmente oferecem melhor qualidade e variedade.
 
-## Dicas Gerais sobre Restaurantes
+### BRASILEIRA
+- **Conceito:** Rica em sabores, ingredientes regionais, tradição familiar.
+- **Pratos típicos:** Feijoada, Moqueca, Churrasco, Arroz e Feijão, Carne Seca, Picanha.
+- **Características:** Pratos autênticos e bem temperados, tradição familiar.
+- **Dica:** Melhores restaurantes brasileiros oferecem pratos autênticos e bem temperados.
 
-### Avaliação de Qualidade
-- Avaliações acima de 4.5 estrelas geralmente indicam excelente qualidade
-- Leia comentários recentes para verificar consistência
-- Restaurantes com muitas avaliações tendem a ser mais confiáveis
+## 3. FATORES DE DECISÃO
+- **Preço:** $ (Econômico, dia a dia), $$ (Moderado, casual), $$$ (Sofisticado, ocasiões especiais), $$$$ (Luxo, experiência gastronômica).
+- **Avaliação:** Acima de 4.5 é excelente; 4.0 a 4.4 é muito bom; abaixo de 4.0 requer leitura de reviews detalhados.
+- **Horários:** Almoço geralmente das 11h30 às 15h; Jantar das 18h às 23h. Alguns restaurantes funcionam apenas no jantar.
 
-### Preços
-- Faixa econômica: R$ 20-40 por pessoa
-- Faixa média: R$ 40-80 por pessoa
-- Faixa alta: R$ 80+ por pessoa
+## 4. CONTEXTO DO IFOOD
+- O TasteMatch opera integrado ao ecossistema de delivery. Considere tempo de entrega e embalagem nas dicas.
+- O iFood é uma das principais plataformas de delivery do Brasil.
+- Sistema de avaliações ajuda na escolha.
+- Promoções e cupons podem tornar pedidos mais acessíveis.
+- Tempo de entrega varia conforme localização e trânsito.
 
-### Horários
-- Almoço: Geralmente das 11h30 às 15h
-- Jantar: Geralmente das 18h às 23h
-- Alguns restaurantes funcionam apenas no jantar
+## 5. DICAS PARA ESCOLHER RESTAURANTES
+1. Considere suas preferências gastronômicas
+2. Verifique avaliações e comentários recentes
+3. Compare preços e faixas de preço
+4. Considere distância e tempo de entrega (para delivery)
+5. Experimente novos tipos de culinária ocasionalmente
+6. Restaurantes locais frequentemente oferecem melhor custo-benefício
+7. Peça recomendações baseadas em seus pedidos anteriores
 
-### Delivery vs Presencial
-- Delivery: Praticidade, mas pode afetar qualidade de alguns pratos
-- Presencial: Melhor experiência, especialmente para pratos quentes e frescos
-- Alguns pratos (como sushi) são melhores no presencial
-
-## Preferências Alimentares
+## 6. PREFERÊNCIAS ALIMENTARES
 
 ### Vegetarianos
 - Buscar restaurantes com opções vegetarianas claramente marcadas
@@ -84,25 +97,13 @@ O TasteMatch é uma plataforma de recomendação de restaurantes que utiliza int
 - Doce: Alguns restaurantes se especializam em sobremesas
 - Salgado: Verificar se o restaurante tempera bem os pratos
 
-## Sobre o iFood
-- O iFood é uma das principais plataformas de delivery do Brasil
-- Oferece uma ampla variedade de restaurantes e culinárias
-- Sistema de avaliações ajuda na escolha
-- Promoções e cupons podem tornar pedidos mais acessíveis
-- Tempo de entrega varia conforme localização e trânsito
+## 7. DELIVERY VS PRESENCIAL
+- Delivery: Praticidade, mas pode afetar qualidade de alguns pratos
+- Presencial: Melhor experiência, especialmente para pratos quentes e frescos
+- Alguns pratos (como sushi) são melhores no presencial
 
-## Dicas para Escolher Restaurantes
-1. Considere suas preferências gastronômicas
-2. Verifique avaliações e comentários recentes
-3. Compare preços e faixas de preço
-4. Considere distância e tempo de entrega (para delivery)
-5. Experimente novos tipos de culinária ocasionalmente
-6. Restaurantes locais frequentemente oferecem melhor custo-benefício
-7. Peça recomendações baseadas em seus pedidos anteriores
-
-## Sazonalidade
+## 8. SAZONALIDADE
 - Alguns pratos são melhores em certas épocas do ano
 - Frutos do mar frescos são melhores em temporadas específicas
 - Sobremesas especiais aparecem em datas comemorativas
 - Restaurantes podem ter pratos sazonais no cardápio
-

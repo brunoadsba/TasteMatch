@@ -37,34 +37,67 @@ def load_static_knowledge(file_path: Optional[str] = None) -> str:
 def build_restaurant_documents(db: Session, limit: Optional[int] = None) -> List[Document]:
     """
     Constrói documentos LangChain a partir dos restaurantes do banco
+    com enriquecimento semântico (tags ocultas) para melhorar busca RAG.
+    
+    ENRIQUECIMENTO SEMÂNTICO:
+    - Adiciona tags relacionadas ao tipo de culinária no conteúdo do documento
+    - Permite que buscas por termos relacionados (ex: "churrasco") encontrem
+      restaurantes de tipos relacionados (ex: "brasileira")
     
     Args:
         db: Sessão do banco de dados
         limit: Limite de restaurantes a processar (None = todos)
     
     Returns:
-        Lista de documentos LangChain
+        Lista de documentos LangChain com tags semânticas
     """
+    # Mapa de Expansão Semântica: Associa tipos de culinária a termos de busca prováveis
+    # Isso permite que buscas por "churrasco" encontrem restaurantes brasileiros
+    cuisine_keywords = {
+        "brasileira": "feijoada, churrasco, carne seca, arroz e feijão, caseira, picanha, bife, rodízio, carne grelhada",
+        "japonesa": "sushi, sashimi, peixe cru, temaki, yakisoba, oriental, lámen, ramen, peixe fresco",
+        "italiana": "massa, pizza, risoto, macarrão, lasanha, cantina, molho, carbonara, bolognese",
+        "hamburgueria": "hambúrguer, burger, sanduíche, batata frita, fast food, carne grelhada, smash, angus",
+        "lanches": "hambúrguer, burger, sanduíche, batata frita, fast food, carne grelhada, smash",
+        "árabe": "esfiha, quibe, kibe, homus, tabule, síria, libanesa, shawarma, kebab",
+        "vegetariana": "salada, plantas, saudável, sem carne, vegano, natural, orgânico",
+        "americana": "carne, picanha, espetinho, grelhado, brasa, angus, costela, steakhouse, churrasco",
+        "mexicana": "tacos, burritos, quesadillas, guacamole, nachos, picante, tex-mex",
+        "chinesa": "yakisoba, lámen, chop suey, dim sum, arroz frito, oriental",
+        "cafeteria": "café, lanches, pães, doces, sobremesas, café da manhã",
+        "sanduíches": "sanduíche, lanche, pão, frios, queijo, presunto"
+    }
+    
     restaurants = crud.get_restaurants(db, skip=0, limit=limit)
     documents = []
     
     for restaurant in restaurants:
-        # Criar texto descritivo do restaurante
-        content_parts = [
-            f"Restaurante: {restaurant.name}",
-            f"Tipo de culinária: {restaurant.cuisine_type}",
-            f"Avaliação: {restaurant.rating}/5.0",
-        ]
+        # Recuperar palavras-chave extras baseadas no tipo de culinária (case-insensitive)
+        cuisine_type_lower = restaurant.cuisine_type.lower() if restaurant.cuisine_type else ""
+        keywords = cuisine_keywords.get(cuisine_type_lower, "")
+        
+        # FASE 1: Construir texto narrativo natural (ao invés de formato técnico chave-valor)
+        # Isso previne que o LLM copie formato técnico para a resposta
+        content = f"{restaurant.name} é um estabelecimento especializado em culinária {restaurant.cuisine_type}."
+        
+        if restaurant.location:
+            content += f" Localizado em {restaurant.location}."
         
         if restaurant.description:
-            content_parts.append(f"Descrição: {restaurant.description}")
+            content += f" O local é conhecido por: {restaurant.description}."
+        
+        # Integrar tags de forma conversacional ao invés de lista crua
+        if keywords:
+            tags_clean = keywords.replace(',', ', ')
+            content += f" O cardápio inclui opções como {tags_clean}."
+        
+        if restaurant.rating:
+            content += f" A avaliação média é {restaurant.rating}/5.0."
         
         if restaurant.price_range:
-            content_parts.append(f"Faixa de preço: {restaurant.price_range}")
+            content += f" A faixa de preço é {restaurant.price_range}."
         
-        content = "\n".join(content_parts)
-        
-        # Criar documento com metadados
+        # Criar documento com metadados incluindo keywords e location
         doc = Document(
             page_content=content,
             metadata={
@@ -73,7 +106,9 @@ def build_restaurant_documents(db: Session, limit: Optional[int] = None) -> List
                 "name": restaurant.name,
                 "cuisine_type": restaurant.cuisine_type,
                 "rating": float(restaurant.rating),
-                "price_range": restaurant.price_range or "N/A"
+                "price_range": restaurant.price_range or "N/A",
+                "location": restaurant.location or "",  # Incluir localização nos metadados
+                "keywords": keywords  # Metadado extra para filtragem futura se necessário
             }
         )
         documents.append(doc)

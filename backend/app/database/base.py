@@ -75,6 +75,10 @@ def get_db():
     
     Yields:
         Session: Sessão do banco de dados
+    
+    Note:
+        pool_pre_ping=True no engine já verifica conexão automaticamente.
+        Erros de conexão serão tratados quando ocorrerem durante o uso da sessão.
     """
     db = SessionLocal()
     try:

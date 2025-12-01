@@ -15,6 +15,7 @@ from app.database.crud import (
     get_user_orders,
     get_restaurants,
     get_restaurants_for_similarity,
+    get_restaurants_metadata,
     get_user_preferences,
     create_or_update_user_preferences
 )
@@ -480,7 +481,9 @@ def select_chef_recommendation(
         return None
     
     # Extrair padrões do usuário
-    restaurants = get_restaurants(db, skip=0, limit=10000)
+    # OTIMIZAÇÃO MEMÓRIA: Usar get_restaurants_metadata() que carrega apenas metadados (id, name, cuisine_type, rating, price_range)
+    # Reduz uso de memória em ~60-80% comparado a get_restaurants(limit=10000) que carrega descrições completas
+    restaurants = get_restaurants_metadata(db, limit=500)  # Reduzido de 10000 para 500
     user_patterns = extract_user_patterns(user_id, orders, restaurants)
     favorite_cuisines = set(user_patterns.get("favorite_cuisines", []))
     

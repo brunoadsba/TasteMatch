@@ -10,6 +10,7 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import PGVector
 from langchain_core.documents import Document
 import logging
+import threading
 
 from app.database.models import Restaurant
 from app.database import crud
@@ -17,6 +18,35 @@ from app.database import crud
 # LLM será injetado via LangChain Groq
 
 logger = logging.getLogger(__name__)
+
+# OTIMIZAÇÃO MEMÓRIA: Singleton para modelo de embeddings
+# Compartilha a mesma instância entre todas as requisições, evitando carregar múltiplas vezes
+_shared_embeddings = None
+_embeddings_lock = threading.Lock()
+
+def get_shared_embeddings():
+    """
+    Retorna instância compartilhada do modelo de embeddings (singleton).
+    Reduz uso de memória evitando carregar o modelo múltiplas vezes.
+    
+    Returns:
+        HuggingFaceEmbeddings: Instância compartilhada do modelo
+    """
+    global _shared_embeddings
+    
+    if _shared_embeddings is None:
+        with _embeddings_lock:
+            # Double-check locking pattern
+            if _shared_embeddings is None:
+                model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+                _shared_embeddings = HuggingFaceEmbeddings(
+                    model_name=model_name,
+                    model_kwargs={'device': 'cpu'},
+                    encode_kwargs={'normalize_embeddings': True}
+                )
+                logger.info("Modelo de embeddings carregado (singleton)")
+    
+    return _shared_embeddings
 
 
 def validate_database_requirements(connection_string: str, db: Session) -> dict:
@@ -107,7 +137,7 @@ def validate_database_requirements(connection_string: str, db: Session) -> dict:
 class RAGService:
     """Serviço RAG usando PGVector para persistência garantida"""
     
-    def __init__(self, db: Session, connection_string: str, validate: bool = True):
+    def __init__(self, db: Session, connection_string: str, validate: bool = True, initialize_vector_store: bool = False):
         """
         Inicializa o serviço RAG
         
@@ -115,6 +145,8 @@ class RAGService:
             db: Sessão do banco de dados
             connection_string: String de conexão PostgreSQL para PGVector
             validate: Se True, valida requisitos do banco antes de inicializar
+            initialize_vector_store: Se True, inicializa vector_store imediatamente (eager).
+                                    Se False, inicializa apenas quando necessário (lazy, padrão).
         """
         self.db = db
         self.connection_string = connection_string
@@ -140,16 +172,21 @@ class RAGService:
                     logger.warning(warning)
         
         self._initialize_embeddings()
+        
+        # Inicializar vector_store imediatamente se solicitado (eager initialization)
+        if initialize_vector_store:
+            self.initialize_vector_store()
+            logger.info("RAG Service inicializado com vector_store ativo (eager mode)")
     
     def _initialize_embeddings(self):
-        """Inicializa o modelo de embeddings HuggingFace"""
-        # Usar modelo leve e eficiente para embeddings
-        model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name=model_name,
-            model_kwargs={'device': 'cpu'},
-            encode_kwargs={'normalize_embeddings': True}
-        )
+        """
+        Inicializa o modelo de embeddings HuggingFace usando singleton.
+        
+        OTIMIZAÇÃO MEMÓRIA: Usa instância compartilhada do modelo para evitar
+        carregar múltiplas vezes na memória (reduz ~200-300MB por worker).
+        """
+        # Usar instância compartilhada (singleton) do modelo de embeddings
+        self.embeddings = get_shared_embeddings()
     
     def initialize_vector_store(self, collection_name: str = "tastematch_knowledge"):
         """
@@ -474,16 +511,34 @@ class RAGService:
         return combined_docs[:k]
 
 
-def get_rag_service(db: Session, connection_string: str) -> RAGService:
+def get_rag_service(db: Session, connection_string: str, eager: bool = False) -> RAGService:
     """
     Factory function para criar instância do RAGService
     
     Args:
-        db: Sessão do banco de dados
+        db: Sessão do banco de dados (cada requisição tem sua própria sessão)
         connection_string: String de conexão PostgreSQL
+        eager: Se True, inicializa vector_store imediatamente (sempre ativo).
+               Se False, inicializa apenas quando necessário (lazy, padrão).
     
     Returns:
         Instância do RAGService
+        
+    Nota:
+        Cada requisição cria nova instância (não compartilhamos db entre requisições).
+        Mas se eager=True, o vector_store é inicializado imediatamente, tornando
+        a primeira busca mais rápida e detectando erros cedo.
     """
-    return RAGService(db, connection_string)
+    # Criar nova instância (cada requisição tem sua própria sessão db)
+    rag_service = RAGService(
+        db=db,
+        connection_string=connection_string,
+        validate=True,
+        initialize_vector_store=eager
+    )
+    
+    if eager:
+        logger.debug("RAG Service criado com vector_store inicializado (eager mode)")
+    
+    return rag_service
 

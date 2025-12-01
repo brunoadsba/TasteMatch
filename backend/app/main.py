@@ -215,27 +215,104 @@ async def health_check():
     Health check endpoint para monitoramento da aplicação.
     
     Returns:
-        dict: Status da aplicação e banco de dados
+        dict: Status da aplicação e todos os bancos de dados
     """
-    from app.database.base import engine
+    from app.database.base import engine, SessionLocal
+    from sqlalchemy import inspect, text
     
-    # Verificar conexão com banco de dados
-    try:
-        with engine.connect() as conn:
-            # Verificar se há tabelas criadas
-            from sqlalchemy import inspect
-            inspector = inspect(engine)
-            tables = inspector.get_table_names()
-            database_status = f"connected ({len(tables)} tables)"
-    except Exception as e:
-        database_status = f"disconnected: {str(e)}"
-    
-    return {
+    health_status = {
         "status": "healthy",
-        "database": database_status,
         "environment": settings.ENVIRONMENT,
         "timestamp": datetime.utcnow().isoformat() + "Z",
+        "databases": {}
     }
+    
+    # Verificar conexão PostgreSQL principal
+    try:
+        with engine.connect() as conn:
+            inspector = inspect(engine)
+            tables = inspector.get_table_names()
+            
+            # Detectar tipo de banco
+            is_supabase = os.getenv("DB_PROVIDER", "").lower() == "supabase" or "supabase" in settings.DATABASE_URL.lower()
+            db_type = "Supabase" if is_supabase else "PostgreSQL Local"
+            
+            # Verificar versão
+            version_result = conn.execute(text("SELECT version()"))
+            version = version_result.fetchone()[0][:50]  # Primeiros 50 caracteres
+            
+            health_status["databases"]["postgresql"] = {
+                "status": "connected",
+                "type": db_type,
+                "tables": len(tables),
+                "version": version
+            }
+    except Exception as e:
+        health_status["databases"]["postgresql"] = {
+            "status": "disconnected",
+            "error": str(e)[:100]  # Primeiros 100 caracteres
+        }
+        health_status["status"] = "degraded"
+    
+    # Verificar extensão pgvector
+    try:
+        db = SessionLocal()
+        try:
+            result = db.execute(text("SELECT * FROM pg_extension WHERE extname = 'vector'"))
+            extension = result.fetchone()
+            
+            if extension:
+                health_status["databases"]["pgvector"] = {
+                    "status": "installed",
+                    "extension": "vector"
+                }
+            else:
+                health_status["databases"]["pgvector"] = {
+                    "status": "not_installed",
+                    "error": "Extensão pgvector não encontrada"
+                }
+                health_status["status"] = "degraded"
+        finally:
+            db.close()
+    except Exception as e:
+        health_status["databases"]["pgvector"] = {
+            "status": "error",
+            "error": str(e)[:100]
+        }
+        health_status["status"] = "degraded"
+    
+    # Verificar RAG Service (lazy - apenas verificar se pode inicializar)
+    try:
+        from app.core.rag_service import validate_database_requirements
+        db = SessionLocal()
+        try:
+            connection_string = settings.DATABASE_URL
+            if connection_string.startswith("postgres://"):
+                connection_string = connection_string.replace("postgres://", "postgresql://", 1)
+            
+            validation = validate_database_requirements(connection_string, db)
+            
+            if validation["valid"]:
+                health_status["databases"]["rag"] = {
+                    "status": "ready",
+                    "warnings": validation.get("warnings", [])
+                }
+            else:
+                health_status["databases"]["rag"] = {
+                    "status": "not_ready",
+                    "errors": validation.get("errors", [])
+                }
+                health_status["status"] = "degraded"
+        finally:
+            db.close()
+    except Exception as e:
+        health_status["databases"]["rag"] = {
+            "status": "error",
+            "error": str(e)[:100]
+        }
+        health_status["status"] = "degraded"
+    
+    return health_status
 
 
 @app.get("/")
@@ -276,6 +353,21 @@ async def startup_event():
             logger.info(f"Limpeza de arquivos temporários: {deleted_count} arquivos deletados")
     except Exception as e:
         logger.warning(f"Erro ao limpar arquivos temporários no startup: {str(e)}")
+    
+    # Inicializar bancos de dados automaticamente
+    try:
+        from app.core.database_startup import initialize_databases
+        db_init_results = await initialize_databases()
+        
+        # Log resumo final
+        if db_init_results.get("overall_success"):
+            logger.info("✅ Todos os bancos de dados inicializados com sucesso")
+        else:
+            logger.warning("⚠️  Alguns bancos de dados podem não estar totalmente configurados")
+            logger.warning("   A aplicação continuará, mas algumas funcionalidades podem não funcionar")
+    except Exception as e:
+        logger.error(f"Erro crítico ao inicializar bancos de dados: {str(e)}", exc_info=True)
+        logger.error("⚠️  Aplicação iniciada, mas bancos de dados podem não estar disponíveis")
 
 
 if __name__ == "__main__":
