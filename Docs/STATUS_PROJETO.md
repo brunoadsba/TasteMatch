@@ -1,7 +1,7 @@
 # TasteMatch - Status do Projeto
 
-> **Última atualização:** 29/11/2025  
-> **Status Geral:** ✅ MVP Funcional + Migração Supabase Concluída + Deploy v42 em Produção
+> **Última atualização:** 30/11/2025  
+> **Status Geral:** ✅ MVP Funcional + Migração Supabase Concluída + Rodando Localmente
 
 ---
 
@@ -629,6 +629,35 @@ Corrigir erros 500 no endpoint `/api/chat/` e problemas com processamento de áu
 
 ---
 
-**Última atualização:** 29/11/2025  
-**Status:** ✅ MVP Completo + Onboarding + Deploy + Mobile-First + Testes E2E + Migração Supabase + Correções de Áudio e Chat + **Melhorias de Inteligência e Formatação do Chef Virtual**
+## 🎯 SPRINT 9: Correções de Sopa e Remoção de "Próximos Passos" (30/11/2025)
+
+### Objetivo
+Corrigir tratamento de queries específicas (sopa) e melhorar UX removendo seção desnecessária das respostas.
+
+### Problemas Resolvidos
+
+1. **Query "sopa" Retornava Recomendações Irrelevantes**
+   - **Problema:** Quando usuário pedia "sopa", sistema não encontrava restaurantes relevantes mas ainda gerava recomendações não relacionadas (ex: Papa John's)
+   - **Solução:** Adicionado "sopa" e "sopas" à lista de `specific_dish_keywords` para tratamento adequado de queries específicas sem match
+   - **Status:** ✅ Resolvido
+
+2. **Seção "Próximos Passos" Aparecia Desnecessariamente**
+   - **Problema:** Seção "📱 Próximos Passos: Digite 'cardápio [nome]'..." aparecia em todas as respostas, mesmo quando não era relevante
+   - **Solução:** Removida completamente a seção "Próximos Passos" das respostas do Chef Virtual
+   - **Status:** ✅ Resolvido
+
+### Arquivos Modificados
+
+- `backend/app/core/chef_chat.py` - Adicionado "sopa" e "sopas" à lista de queries específicas, removida seção "Próximos Passos"
+
+### Resultados
+
+- ✅ Queries específicas sem match retornam mensagem clara ao invés de recomendações irrelevantes
+- ✅ Respostas mais limpas sem seção "Próximos Passos"
+- ✅ Melhor experiência do usuário com mensagens diretas e úteis
+
+---
+
+**Última atualização:** 30/11/2025  
+**Status:** ✅ MVP Completo + Onboarding + Deploy + Mobile-First + Testes E2E + Migração Supabase + Correções de Áudio e Chat + Melhorias de Inteligência e Formatação do Chef Virtual + **Correções de Sopa e Remoção de "Próximos Passos"**
 

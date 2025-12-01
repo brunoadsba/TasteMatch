@@ -435,6 +435,24 @@ exit
    - Ajustar workers do uvicorn se necessário
    - Configurar CDN para frontend (Netlify já faz isso)
 
+3. **Memória e Otimização:**
+   - **Memória configurada:** 1GB (fly.toml)
+   - **Workers:** 1 (otimizado para reduzir uso de memória)
+   - **Swap:** 512MB habilitado
+   - **Otimizações aplicadas:**
+     - Singleton pattern para modelo de embeddings (reduz ~200-300MB)
+     - Uso de `get_restaurants_metadata()` ao invés de `get_restaurants()` (reduz ~60-80% de memória)
+     - Limites reduzidos em consultas grandes (500 ao invés de 1000-10000)
+   - **Documentação completa:** Ver [OTIMIZACAO_MEMORIA.md](./OTIMIZACAO_MEMORIA.md)
+   - **Se ocorrer OOM (Out of Memory):**
+     ```bash
+     # Verificar logs
+     fly logs -a tastematch-api | grep -i "out of memory"
+     
+     # Aumentar memória (se necessário)
+     fly scale memory 2048 -a tastematch-api  # 2GB (~$5/mês adicional)
+     ```
+
 3. **Backup:**
    - Configurar backups automáticos do PostgreSQL
    - Fly Postgres tem backups automáticos
