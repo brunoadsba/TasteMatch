@@ -112,3 +112,45 @@ backend/scripts/check_migration.sh
 backend/scripts/setup_postgres.*
 backend/scripts/generate_inserts_for_supabase.py
 backend/scripts/run_migration_auto.py
+
+# Documentação temporária de debug/análise
+Docs/ANALISE_*.md
+Docs/DEBUG_*.md
+Docs/CORRECAO_*.md
+Docs/RESULTADO_*.md
+Docs/DIAGNOSTICO_*.md
+Docs/SOLUCAO_*.md
+Docs/PLANO_*.md
+Docs/INSTRUCOES_*.md
+Docs/CHECKLIST_*.md
+Docs/RESUMO_*.md
+Docs/VALIDACAO_*.md
+Docs/MELHORIAS_*.md
+Docs/PROBLEMA_*.md
+Docs/ERRO*.md
+Docs/OTIMIZACAO_*.md
+Docs/INICIALIZACAO_*.md
+Docs/RAG_*.md
+Docs/SUCESSO_*.md
+Docs/AVALIACAO_*.md
+Docs/NOTA_*.md
+Docs/correcao-*.md
+Docs/erro500*.md
+Docs/problemas-*.md
+Docs/sugestao-*.md
+Docs/conhecimento-*.md
+
+# Scripts de teste temporários
+backend/scripts/test_*.py
+backend/scripts/debug_*.py
+backend/scripts/check_*.py
+backend/scripts/reindex_*.py
+backend/test_*.py
+
+# Paths do Windows
+C:/
+Users/
+
+# Arquivos de apresentação temporários (se não forem necessários)
+APRESENTACAO_1MIN.md
+ROTEIRO_VIDEO_1MIN.md

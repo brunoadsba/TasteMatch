@@ -4,95 +4,38 @@
 
 ---
 
-## 📚 Documentação Essencial
+## Documentação Essencial
 
-### Especificação e Planejamento
+### Especificação e Status
 - **[SPEC.md](./SPEC.md)** - Especificação técnica completa do projeto
+- **[STATUS_PROJETO.md](./STATUS_PROJETO.md)** - Status atual do projeto e histórico de desenvolvimento
 - **[plano-de-acao.md](./plano-de-acao.md)** - Plano de desenvolvimento detalhado
-- **[STATUS_PROJETO.md](./STATUS_PROJETO.md)** - Status atual do projeto e progresso
 
-### Deploy e Produção
+### Deploy e Infraestrutura
 - **[DEPLOY.md](./DEPLOY.md)** - Guia completo de deploy em produção
+- **[SETUP_LOCAL.md](./SETUP_LOCAL.md)** - Guia de setup para desenvolvimento local
 - **[supabase.md](./supabase.md)** - Plano de migração para Supabase
 - **[status-migracao-supabase.md](./status-migracao-supabase.md)** - Status detalhado da migração
-- **[RESUMO_MIGRACAO_SUPABASE.md](./RESUMO_MIGRACAO_SUPABASE.md)** - Resumo executivo da migração
 
 ### Chef Virtual
 - **[README-CHEF-VIRTUAL.md](./README-CHEF-VIRTUAL.md)** - Documentação completa do Chef Virtual (RAG, STT/TTS, monitoramento)
-- **[STATUS-CHEF-VIRTUAL.md](./STATUS-CHEF-VIRTUAL.md)** - Status detalhado e lições aprendidas do Chef Virtual
 
-### Lições e Análises
+### Lições Aprendidas
 - **[licoes-aprendidas.md](./licoes-aprendidas.md)** - Compilação de lições aprendidas durante o desenvolvimento
-- **[erros-deploy-migracao.md](./erros-deploy-migracao.md)** - Erros encontrados e soluções aplicadas durante deploy e migração
-- **[ANALISE_PENDENCIAS.md](./ANALISE_PENDENCIAS.md)** - Análise geral de pendências do projeto
-
-### Troubleshooting e Correções
-- **[erro500.md](./erro500.md)** - Documentação completa do erro 500 no endpoint /api/chat/
-- **[ANALISE_SOLUCOES_ERRO_500.md](./ANALISE_SOLUCOES_ERRO_500.md)** - Análise comparativa de soluções propostas
-- **[IMPLEMENTACAO_OPCAO_C.md](./IMPLEMENTACAO_OPCAO_C.md)** - Implementação da solução híbrida
-- **[CORRECAO_PATCH_CLIENTE_GROQ.md](./CORRECAO_PATCH_CLIENTE_GROQ.md)** - Correção do patch do cliente Groq
-- **[SOLUCAO_ERRO_AUDIO_GROQ.md](./SOLUCAO_ERRO_AUDIO_GROQ.md)** - Solução do erro de áudio (versão SDK)
-- **[CORRECAO_AUDIO.md](./CORRECAO_AUDIO.md)** - Correções de áudio (caminho, async, etc.)
-
-### Manutenção
-- **[LIMPEZA_EXECUTADA.md](./LIMPEZA_EXECUTADA.md)** - Documentação da limpeza profissional executada
 
 ---
 
-## 🎯 Guia Rápido
+## Guia Rápido
 
 ### Para Desenvolvedores
 1. Comece por **[SPEC.md](./SPEC.md)** para entender a arquitetura
-2. Consulte **[plano-de-acao.md](./plano-de-acao.md)** para ver o roadmap
-3. Veja **[STATUS_PROJETO.md](./STATUS_PROJETO.md)** para o status atual
+2. Consulte **[STATUS_PROJETO.md](./STATUS_PROJETO.md)** para o status atual
+3. Veja **[SETUP_LOCAL.md](./SETUP_LOCAL.md)** para configurar ambiente local
 
 ### Para Deploy
 1. Siga **[DEPLOY.md](./DEPLOY.md)** para deploy completo
 2. Consulte **[supabase.md](./supabase.md)** se precisar migrar banco de dados
-3. Veja **[erros-deploy-migracao.md](./erros-deploy-migracao.md)** para troubleshooting
-
-### Para Troubleshooting
-1. Consulte **[licoes-aprendidas.md](./licoes-aprendidas.md)** para problemas comuns
-2. Veja **[erros-deploy-migracao.md](./erros-deploy-migracao.md)** para erros específicos
-3. Consulte **[ANALISE_PENDENCIAS.md](./ANALISE_PENDENCIAS.md)** para pendências conhecidas
 
 ---
 
-## 📊 Estrutura da Documentação
-
-```
-Docs/
-├── README.md (este arquivo)
-├── SPEC.md
-├── DEPLOY.md
-├── STATUS_PROJETO.md
-├── plano-de-acao.md
-├── supabase.md
-├── status-migracao-supabase.md
-├── RESUMO_MIGRACAO_SUPABASE.md
-├── README-CHEF-VIRTUAL.md
-├── STATUS-CHEF-VIRTUAL.md
-├── licoes-aprendidas.md
-├── erros-deploy-migracao.md
-├── ANALISE_PENDENCIAS.md
-├── LIMPEZA_EXECUTADA.md
-├── erro500.md
-├── ANALISE_SOLUCOES_ERRO_500.md
-├── IMPLEMENTACAO_OPCAO_C.md
-├── CORRECAO_PATCH_CLIENTE_GROQ.md
-├── SOLUCAO_ERRO_AUDIO_GROQ.md
-└── CORRECAO_AUDIO.md
-```
-
----
-
-## 🔄 Atualizações
-
-**Última atualização**: 29/11/2025  
-**Limpeza de documentação**: Concluída  
-**Correções de áudio e chat**: Documentadas (29/11/2025)
-
----
-
-**Nota**: Esta documentação foi organizada e limpa para facilitar navegação e manutenção. Arquivos temporários e duplicados foram removidos, mantendo apenas documentação essencial e atualizada.
-
+**Última atualização:** 30/11/2025
