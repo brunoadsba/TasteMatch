@@ -113,6 +113,10 @@ backend/scripts/setup_postgres.*
 backend/scripts/generate_inserts_for_supabase.py
 backend/scripts/run_migration_auto.py
 
+# Guias de deploy específicos (Fly.io) - não essenciais para setup local
+backend/scripts/EXECUTAR_*.md
+backend/requirements-docker.txt
+
 # Documentação temporária de debug/análise
 Docs/ANALISE_*.md
 Docs/DEBUG_*.md
