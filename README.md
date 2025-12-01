@@ -111,13 +111,14 @@ nano .env
 
 ```bash
 # Iniciar PostgreSQL via Docker
-docker-compose up -d postgres
+docker compose up -d postgres
 
-# Aplicar migrations
+# Aplicar migrations (OBRIGATÓRIO - cria todas as tabelas necessárias)
 cd backend
 alembic upgrade head
 
-# Popular com dados de exemplo
+# Popular com dados de exemplo (OPCIONAL - recomendado para testes)
+# Inclui: 25 restaurantes, 5 usuários, 67 pedidos e embeddings
 python scripts/seed_data.py
 ```
 
@@ -143,7 +144,7 @@ A aplicação estará disponível em:
 
 ### Credenciais de Teste
 
-Após executar o seed:
+**Disponíveis apenas após executar o seed (opcional):**
 
 | Email | Senha |
 |-------|-------|
