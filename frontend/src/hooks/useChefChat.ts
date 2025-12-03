@@ -44,7 +44,7 @@ export function useChefChat(): UseChefChatReturn {
       const assistantMessage: ChatMessage = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: response.answer,
+        content: typeof response.answer === 'string' ? response.answer : JSON.stringify(response.answer),
         audio_url: response.audio_url || null,
         created_at: new Date().toISOString(),
       };
@@ -90,7 +90,7 @@ export function useChefChat(): UseChefChatReturn {
       const assistantMessage: ChatMessage = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: response.answer,
+        content: typeof response.answer === 'string' ? response.answer : JSON.stringify(response.answer),
         audio_url: response.audio_url || null,
         created_at: new Date().toISOString(),
       };

@@ -1018,7 +1018,25 @@ def extract_restaurant_names_from_text(text: str) -> List[str]:
             unique_names.append(name)
             seen.add(name_lower)
     
-    return unique_names
+    common_dishes = {
+        'pizza', 'sushi', 'churrasco', 'acarajé', 'feijoada', 'hambúrguer', 
+        'massa', 'taco', 'burrito', 'frango frito', 'pão de queijo', 'coxinha',
+        'pastel', 'esfiha', 'kibe', 'falafel', 'shawarma', 'paella', 'risoto',
+        'lasanha', 'nhoque', 'ravioli', 'tempura', 'yakisoba', 'sashimi',
+        'temaki', 'poke', 'galeto', 'picanha', 'costela', 'moqueca', 'vatapá',
+        'acaraje', 'feijoada', 'hamburguer', 'massa', 'frango frito', 'pao de queijo',
+        'esfiha', 'kibe', 'risoto', 'lasanha', 'nhoque', 'yakisoba', 'sashimi',
+        'temaki', 'poke', 'galeto', 'picanha', 'costela', 'moqueca', 'vatapa'
+    }
+    
+    # Filtrar pratos comuns que não devem ser tratados como restaurantes
+    final_names = []
+    for name in unique_names:
+        name_lower = name.lower().strip()
+        if name_lower not in common_dishes:
+            final_names.append(name)
+            
+    return final_names
 
 
 def validate_answer_against_context(
@@ -1322,6 +1340,7 @@ def clean_technical_metadata(text: str) -> str:
         r'Source:\s*.*$',                                   # Artefatos LangChain
         r'Metadata:\s*\{.*?\}',                            # JSON cru
         r'Localização:\s*.*$',                              # "Localização: ..."
+        r'\*\*[\d/.]+\*+',                                  # Remove padrões de score de confiança vazados (ex: **5/5.8/5.)
     ]
     
     cleaned_text = text
